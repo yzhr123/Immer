@@ -99,11 +99,11 @@ export async function POST(request: NextRequest) {
         updatedGame.companionRole = storyResult.companion_role || ''
       }
 
-      await store.updateGameState(roomCode, updatedGame)
+      await store.updateGameState(roomCode.toUpperCase(), updatedGame)
 
       return NextResponse.json({
         accepted: true,
-        room: await store.getRoom(roomCode),
+        room: await store.getRoom(roomCode.toUpperCase()),
       })
     } catch (genErr: unknown) {
       // LLM generation failed — release the lock so someone else can try
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
       // Restore room to unlocked state
       try {
-        const current = await store.getRoom(roomCode)
+        const current = await store.getRoom(roomCode.toUpperCase())
         if (current) {
           current.resolvedChoiceId = null
           current.lockedUntil = null

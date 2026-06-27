@@ -82,7 +82,7 @@ export class MemoryStore implements MultiplayerStore {
   }
 
   async joinRoom(roomCode: string, playerName: string): Promise<{ playerId: string; room: MPRoom }> {
-    const room = this.rooms.get(roomCode)
+    const room = this.rooms.get(roomCode.toUpperCase())
     if (!room) throw new Error('Room not found')
     if (room.status !== 'waiting') throw new Error('Game already started')
 
@@ -93,7 +93,7 @@ export class MemoryStore implements MultiplayerStore {
   }
 
   async getRoom(roomCode: string): Promise<MPRoom | null> {
-    return this.rooms.get(roomCode) ?? null
+    return this.rooms.get(roomCode.toUpperCase()) ?? null
   }
 
   async submitChoice(
@@ -102,7 +102,7 @@ export class MemoryStore implements MultiplayerStore {
     choiceId: string,
     _choiceText: string,
   ): Promise<{ accepted: boolean; room?: MPRoom; reason?: string }> {
-    const room = this.rooms.get(roomCode)
+    const room = this.rooms.get(roomCode.toUpperCase())
     if (!room) return { accepted: false, reason: 'Room not found' }
     if (!room.gameState) return { accepted: false, reason: 'Game not started' }
     if (room.status === 'completed') return { accepted: false, reason: 'Game already ended' }
@@ -120,7 +120,7 @@ export class MemoryStore implements MultiplayerStore {
   }
 
   async updateGameState(roomCode: string, gameState: GameState): Promise<void> {
-    const room = this.rooms.get(roomCode)
+    const room = this.rooms.get(roomCode.toUpperCase())
     if (!room) throw new Error('Room not found')
 
     room.gameState = gameState
@@ -131,7 +131,7 @@ export class MemoryStore implements MultiplayerStore {
   }
 
   async removePlayer(roomCode: string, playerId: string): Promise<void> {
-    const room = this.rooms.get(roomCode)
+    const room = this.rooms.get(roomCode.toUpperCase())
     if (!room) return
     room.players = room.players.filter((p) => p.id !== playerId)
     room.lastActivityAt = Date.now()

@@ -185,6 +185,10 @@ export default function MultiplayerRoomPage() {
     setWaitingForLLM(false)
   }, [submitChoice, waitingForLLM])
 
+  const handleTypingComplete = useCallback(() => {
+    setTypingDone(true)
+  }, [])
+
   function getDisplayScene() {
     if (viewingHistoryIndex === null || !gameState) {
       return { scene: gameState?.currentScene ?? null, choice: null, historyMood: null }
@@ -345,7 +349,7 @@ export default function MultiplayerRoomPage() {
                   <div className="text-base leading-relaxed whitespace-pre-wrap transition-colors duration-500" style={{ color: theme.text }}>{displayScene.narrative}</div>
                 ) : (
                   <>
-                    <NarrativeText text={displayScene.narrative} onComplete={() => setTypingDone(true)} textColor={theme.text} />
+                    <NarrativeText text={displayScene.narrative} onComplete={handleTypingComplete} textColor={theme.text} />
                     {!typingDone && <p className="text-xs mt-4 tracking-wider" style={{ color: theme.textMuted }}>CLICK TO SKIP</p>}
                   </>
                 )}

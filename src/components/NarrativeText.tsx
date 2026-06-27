@@ -15,6 +15,8 @@ function NarrativeTextInner({ text, onComplete, speed = 30, textColor = '#27272a
   const indexRef = useRef(0)
   const calledRef = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const finish = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -22,9 +24,9 @@ function NarrativeTextInner({ text, onComplete, speed = 30, textColor = '#27272a
     setIsTyping(false)
     if (!calledRef.current) {
       calledRef.current = true
-      setTimeout(() => onComplete(), 100)
+      setTimeout(() => onCompleteRef.current(), 100)
     }
-  }, [text, onComplete])
+  }, [text])
 
   useEffect(() => {
     indexRef.current = 0
