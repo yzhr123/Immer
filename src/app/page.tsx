@@ -107,6 +107,21 @@ export default function Lobby() {
           {loading ? 'INITIALIZING...' : genre ? 'BEGIN' : 'SELECT A GENRE'}
         </button>
 
+        {/* Multiplayer section */}
+        <div className="w-full pt-4 border-t border-zinc-100">
+          <p className="text-center text-xs text-zinc-300 tracking-widest mb-4">
+            OR PLAY TOGETHER
+          </p>
+          <button
+            onClick={() => router.push('/multiplayer')}
+            className="w-full py-3 text-sm tracking-widest border border-zinc-200
+              text-zinc-400 hover:text-zinc-800 hover:border-zinc-600
+              transition-all duration-200 rounded-none"
+          >
+            MULTIPLAYER
+          </button>
+        </div>
+
         {/* Bottom Links */}
         <div className="flex items-center gap-8 text-xs text-zinc-400">
           <button
