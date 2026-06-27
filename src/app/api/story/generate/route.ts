@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
 import { GENRE_NAMES, Genre, ContextEntry } from '@/lib/ai/types'
+import { getImagePrice } from '@/lib/credit/store'
+import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +17,7 @@ export async function POST(request: NextRequest) {
     const imageModelId = body.imageModelId as string | undefined
     const generateImageParam = body.generateImage !== false
     const storyLength = body.storyLength as string | undefined
+    const userId = body.userId as string | undefined
 
     if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
       return NextResponse.json(
@@ -33,11 +36,20 @@ export async function POST(request: NextRequest) {
     let imageUrl = ''
     let imageError = ''
     if (generateImageParam && storyResult.scene.imagePrompt) {
-      try {
-        imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
-      } catch (imgErr: unknown) {
-        imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
-        console.error('Image generation error:', imageError)
+      if (userId) {
+        const creditStore = getCreditStore()
+        const deduct = await creditStore.deductCredits(userId, getImagePrice('full'), '图片生成-剧情模式')
+        if (!deduct.success) {
+          imageError = deduct.reason || '余额不足'
+        }
+      }
+      if (!imageError) {
+        try {
+          imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+        } catch (imgErr: unknown) {
+          imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
+          console.error('Image generation error:', imageError)
+        }
       }
     }
     storyResult.scene.imageUrl = imageUrl

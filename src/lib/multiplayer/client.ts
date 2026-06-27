@@ -308,15 +308,25 @@ export function useMultiplayer(options?: UseMultiplayerOptions): UseMultiplayerR
     }
   }, [roomCode, playerId, room?.gameState])
 
-  const leaveRoom = useCallback(() => {
+  const leaveRoom = useCallback(async () => {
+    if (roomCode && playerId) {
+      try {
+        await fetch('/api/multiplayer/leave', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode, playerId }),
+        })
+      } catch {
+      }
+    }
+
     setRoom(null)
-    // Don't clear playerId so they can rejoin
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
       pollingRef.current = null
     }
     router.push('/multiplayer')
-  }, [router])
+  }, [router, roomCode, playerId])
 
   return {
     room,

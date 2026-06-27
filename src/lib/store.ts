@@ -19,6 +19,7 @@ const SAVED_GAMES_KEY = 'immer_saved_games'
 const BGM_KEY = 'immer_bgm_enabled'
 const IMAGE_MODE_KEY = 'immer_image_mode'
 const COMPANION_KEY = 'immer_companion_enabled'
+const LANGUAGE_KEY = 'immer_language'
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -55,6 +56,8 @@ interface AppStore {
   setImageMode: (v: ImageMode) => void
   companionEnabled: boolean
   setCompanionEnabled: (v: boolean) => void
+  language: 'en' | 'zh'
+  setLanguage: (v: 'en' | 'zh') => void
   game: GameState | null
   savedGames: SavedGameMeta[]
 
@@ -103,8 +106,9 @@ export const useStore = create<AppStore>((set, get) => ({
   }),
   game: null,
   bgmEnabled: loadJson<boolean>(BGM_KEY, true),
-  imageMode: loadJson<ImageMode>(IMAGE_MODE_KEY, 'full'),
+  imageMode: loadJson<ImageMode>(IMAGE_MODE_KEY, 'none'),
   companionEnabled: loadJson<boolean>(COMPANION_KEY, true),
+  language: loadJson<'en' | 'zh'>(LANGUAGE_KEY, 'zh'),
   savedGames: [],
 
   setBgmEnabled: (v) => {
@@ -120,6 +124,11 @@ export const useStore = create<AppStore>((set, get) => ({
   setCompanionEnabled: (v) => {
     saveJson(COMPANION_KEY, v)
     set({ companionEnabled: v })
+  },
+
+  setLanguage: (v) => {
+    saveJson(LANGUAGE_KEY, v)
+    set({ language: v })
   },
 
   setLLMSettings: (settings) => {

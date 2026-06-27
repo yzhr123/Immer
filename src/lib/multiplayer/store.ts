@@ -2,7 +2,7 @@
  * Multiplayer Room Store
  *
  * ┌─ Abstraction: any store implementing `MultiplayerStore` can be swapped in.
- * ├─ MemoryStore   — works out of the box for `next dev` (single-process).
+ * ├─ MemoryStore   — in-memory + JSON file persistence (.data/multiplayer-store.json)
  * └─ UpstashRedis  — for production on Netlify/Vercel (serverless). Unused until you set up.
  *
  * To switch: set `MULTIPLAYER_STORE=upstash` and configure env vars below.
@@ -25,7 +25,6 @@ export interface MultiplayerStore {
   joinRoom(roomCode: string, playerName: string): Promise<{ playerId: string; room: MPRoom }>
   getRoom(roomCode: string): Promise<MPRoom | null>
 
-  /** Attempt to lock + resolve a choice for the current scene. Returns accepted=true on first success. */
   submitChoice(
     roomCode: string,
     playerId: string,
@@ -33,18 +32,59 @@ export interface MultiplayerStore {
     choiceText: string,
   ): Promise<{ accepted: boolean; room?: MPRoom; reason?: string }>
 
-  /** Overwrite the entire gameState (after LLM generation) and unlock */
   updateGameState(roomCode: string, gameState: GameState): Promise<void>
-
   removePlayer(roomCode: string, playerId: string): Promise<void>
 }
 
 /* ============================================================
- *  In-Memory implementation (for local dev)
+ *  File persistence helpers
+ * ============================================================ */
+
+interface StoreSnapshot {
+  rooms: Record<string, MPRoom>
+}
+
+const DATA_DIR = '.data'
+const DATA_FILE = 'multiplayer-store.json'
+
+function getDataFilePath(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path')
+  return path.join(process.cwd(), DATA_DIR, DATA_FILE)
+}
+
+function loadSnapshot(): StoreSnapshot | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs')
+    const fp = getDataFilePath()
+    if (!fs.existsSync(fp)) return null
+    return JSON.parse(fs.readFileSync(fp, 'utf-8'))
+  } catch {
+    return null
+  }
+}
+
+function saveSnapshot(data: StoreSnapshot): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('fs')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('path')
+    const dir = path.join(process.cwd(), DATA_DIR)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(getDataFilePath(), JSON.stringify(data, null, 2))
+  } catch (e) {
+    console.error('Failed to persist multiplayer store:', e)
+  }
+}
+
+/* ============================================================
+ *  In-Memory implementation with file persistence
  * ============================================================ */
 
 function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no I,O,0,1 to avoid confusion
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
@@ -55,7 +95,25 @@ function generateId(): string {
 }
 
 export class MemoryStore implements MultiplayerStore {
-  private rooms = new Map<string, MPRoom>()
+  private rooms: Map<string, MPRoom>
+
+  constructor() {
+    this.rooms = new Map()
+    this.loadFromDisk()
+  }
+
+  private loadFromDisk(): void {
+    const snap = loadSnapshot()
+    if (!snap) return
+    this.rooms = new Map(Object.entries(snap.rooms))
+  }
+
+  private persist(): void {
+    const data: StoreSnapshot = {
+      rooms: Object.fromEntries(this.rooms),
+    }
+    saveSnapshot(data)
+  }
 
   async createRoom(req: CreateRoomRequest): Promise<{ roomCode: string; playerId: string; room: MPRoom }> {
     const playerId = generateId()
@@ -78,6 +136,7 @@ export class MemoryStore implements MultiplayerStore {
       lastActivityAt: now,
     }
     this.rooms.set(roomCode, room)
+    this.persist()
     return { roomCode, playerId, room }
   }
 
@@ -89,6 +148,7 @@ export class MemoryStore implements MultiplayerStore {
     const playerId = generateId()
     room.players.push({ id: playerId, name: playerName, joinedAt: Date.now() })
     room.lastActivityAt = Date.now()
+    this.persist()
     return { playerId, room }
   }
 
@@ -107,15 +167,11 @@ export class MemoryStore implements MultiplayerStore {
     if (!room.gameState) return { accepted: false, reason: 'Game not started' }
     if (room.status === 'completed') return { accepted: false, reason: 'Game already ended' }
 
-    // If someone already chose for the current scene → reject
     if (room.resolvedChoiceId !== null) {
       return { accepted: false, reason: 'Another player already made a choice' }
     }
 
-    // First-to-choose: lock immediately
     room.resolvedChoiceId = choiceId
-
-    // (The caller — the API route — will call updateGameState after LLM finishes)
     return { accepted: true, room }
   }
 
@@ -128,6 +184,7 @@ export class MemoryStore implements MultiplayerStore {
     room.lockedUntil = null
     room.status = (gameState.status as RoomStatus) === 'completed' ? 'completed' : 'playing'
     room.lastActivityAt = Date.now()
+    this.persist()
   }
 
   async removePlayer(roomCode: string, playerId: string): Promise<void> {
@@ -135,6 +192,7 @@ export class MemoryStore implements MultiplayerStore {
     if (!room) return
     room.players = room.players.filter((p) => p.id !== playerId)
     room.lastActivityAt = Date.now()
+    this.persist()
   }
 
   /* ---- helpers ---- */
@@ -144,7 +202,6 @@ export class MemoryStore implements MultiplayerStore {
       const code = generateCode()
       if (!this.rooms.has(code)) return code
     }
-    // extremely unlikely collision: widen
     return generateCode() + generateCode().slice(0, 1)
   }
 }
@@ -161,8 +218,7 @@ export function getStore(): MultiplayerStore {
   const backend = (process.env.MULTIPLAYER_STORE ?? 'memory').toLowerCase()
 
   if (backend === 'upstash') {
-    // Lazy-import so the upstash dependency is optional
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { UpstashStore } = require('./store-upstash') as { UpstashStore: new () => MultiplayerStore }
     _store = new UpstashStore()
   } else {
@@ -172,7 +228,6 @@ export function getStore(): MultiplayerStore {
   return _store
 }
 
-/** For testing: reset the singleton */
 export function resetStore(): void {
   _store = null
 }

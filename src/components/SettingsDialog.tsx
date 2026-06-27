@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
-import type { ImageMode } from '@/lib/ai/types'
+import { useCredits } from '@/lib/credit/client'
+import { t } from '@/lib/i18n'
 
 export default function SettingsDialog() {
-  const { llmSettings, setLLMSettings, imageMode, setImageMode } = useStore()
+  const { llmSettings, setLLMSettings, language } = useStore()
+  const { balance, loading } = useCredits()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ ...llmSettings })
 
@@ -20,7 +22,7 @@ export default function SettingsDialog() {
         onClick={() => setOpen(true)}
         className="text-xs text-zinc-400 hover:text-zinc-800 transition-colors tracking-wider uppercase"
       >
-        Settings
+        {t('settings.title', language)}
       </button>
 
       {open && (
@@ -33,13 +35,13 @@ export default function SettingsDialog() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-sm font-medium text-zinc-800 tracking-wide mb-6">
-              LLM Configuration
+              {t('settings.llmConfig', language)}
             </h2>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-zinc-500 mb-1.5 tracking-wide">
-                  API URL
+                  {t('settings.apiUrl', language)}
                 </label>
                 <input
                   type="text"
@@ -52,7 +54,7 @@ export default function SettingsDialog() {
 
               <div>
                 <label className="block text-xs text-zinc-500 mb-1.5 tracking-wide">
-                  LLM Model
+                  {t('settings.model', language)}
                 </label>
                 <input
                   type="text"
@@ -65,7 +67,7 @@ export default function SettingsDialog() {
 
               <div>
                 <label className="block text-xs text-zinc-500 mb-1.5 tracking-wide">
-                  LLM API Key
+                  {t('settings.apiKey', language)}
                 </label>
                 <input
                   type="password"
@@ -78,7 +80,7 @@ export default function SettingsDialog() {
 
               <div className="border-t border-zinc-100 pt-4 mt-4">
                 <label className="block text-xs text-zinc-500 mb-1.5 tracking-wide">
-                  Image Model ID (optional)
+                  {t('settings.imageModelId', language)}
                 </label>
                 <input
                   type="text"
@@ -91,49 +93,36 @@ export default function SettingsDialog() {
 
               <div className="border-t border-zinc-100 pt-4 mt-4">
                 <label className="block text-xs text-zinc-500 mb-3 tracking-wide">
-                  Image Mode
+{t('settings.credits', language)}
                 </label>
-                <div className="flex gap-4">
-                  {(['full', 'lazy', 'none'] as ImageMode[]).map((mode) => (
-                    <label
-                      key={mode}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-xs tracking-wider transition-colors ${
-                        imageMode === mode
-                          ? 'bg-zinc-800 text-white'
-                          : 'bg-zinc-50 text-zinc-500 hover:text-zinc-700'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="imageMode"
-                        value={mode}
-                        checked={imageMode === mode}
-                        onChange={() => setImageMode(mode)}
-                        className="sr-only"
-                      />
-                      {mode === 'full' ? 'Full' : mode === 'lazy' ? 'Lazy' : 'None'}
-                    </label>
-                  ))}
+                <div className="flex items-center">
+                  <span className="text-sm text-zinc-700">
+                    {t('settings.balance', language, { balance: loading ? '...' : balance })}
+                  </span>
                 </div>
+                <p className="text-xs text-zinc-400 mt-3">{t('payment.rechargeHint', language)}</p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {t('settings.rechargeInLobby', language)}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center justify-between mt-8">
               <span className="text-xs text-zinc-400">
-                {llmSettings.apiUrl ? 'LLM configured' : 'LLM not configured'}
+                {llmSettings.apiUrl ? t('settings.llmConfigured', language) : t('settings.llmNotConfigured', language)}
               </span>
               <div className="flex gap-3">
                 <button
                   onClick={() => setOpen(false)}
                   className="px-4 py-2 text-xs text-zinc-500 hover:text-zinc-800 transition-colors"
                 >
-                  Cancel
+                  {t('settings.cancelBtn', language)}
                 </button>
                 <button
                   onClick={handleSave}
                   className="px-5 py-2 text-xs text-white bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
                 >
-                  Save
+{t('settings.saveBtn', language)}
                 </button>
               </div>
             </div>

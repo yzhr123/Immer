@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Genre, GENRE_NAMES } from '@/lib/ai/types'
+import { useStore } from '@/lib/store'
+import { t } from '@/lib/i18n'
 
 const GENRES: Genre[] = ['fantasy', 'sci-fi', 'mystery', 'historical', 'horror', 'martial-arts']
 
@@ -12,6 +14,7 @@ export default function GenreSelector({
   selected: string | null
   onSelect: (genre: string) => void
 }) {
+  const language = useStore((s) => s.language)
   const [customMode, setCustomMode] = useState(false)
   const [customValue, setCustomValue] = useState('')
 
@@ -25,7 +28,7 @@ export default function GenreSelector({
             setCustomValue(e.target.value)
             onSelect(e.target.value || '自定义')
           }}
-          placeholder="输入自定义类型..."
+          placeholder={t('genre.customPlaceholder', language)}
           className="w-64 text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-1.5 focus:outline-none focus:border-zinc-600 transition-colors"
           autoFocus
         />
@@ -37,7 +40,7 @@ export default function GenreSelector({
           }}
           className="text-xs text-zinc-400 hover:text-zinc-600 tracking-wider transition-colors"
         >
-          BACK TO PRESETS
+          {t('genre.backToPresets', language)}
         </button>
       </div>
     )
@@ -71,7 +74,7 @@ export default function GenreSelector({
             : 'text-zinc-400 hover:text-zinc-600'
         }`}
       >
-        CUSTOM
+        {t('genre.custom', language)}
       </button>
     </div>
   )

@@ -11,6 +11,7 @@ import ChoiceButton from '@/components/ChoiceButton'
 import BGMPlayer from '@/components/BGMPlayer'
 import ClueSidebar from '@/components/ClueSidebar'
 import CompanionBubble from '@/components/CompanionBubble'
+import { getUserId, useCredits } from '@/lib/credit/client'
 
 const PLAYER_ID_KEY = 'immer_mp_playerId'
 
@@ -59,6 +60,7 @@ export default function MultiplayerRoomPage() {
 
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
+  const { balance } = useCredits()
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -103,7 +105,7 @@ export default function MultiplayerRoomPage() {
         const res = await fetch('/api/story/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imagePrompt: currentScene.imagePrompt, imageModelId: prefs.imageModelId || '' }),
+          body: JSON.stringify({ imagePrompt: currentScene.imagePrompt, imageModelId: prefs.imageModelId || '', userId: getUserId() }),
         })
         if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) || 'Image generation failed')
       } catch (err: unknown) {
@@ -172,8 +174,8 @@ export default function MultiplayerRoomPage() {
     }
   }, [joinName, joinRoom])
 
-  const handleRestart = useCallback(() => {
-    leaveRoom()
+  const handleRestart = useCallback(async () => {
+    await leaveRoom()
   }, [leaveRoom])
 
   const handleChoice = useCallback(async (choiceId: string) => {
@@ -293,6 +295,7 @@ export default function MultiplayerRoomPage() {
                 style={{ color: bgmEnabled ? theme.textSecondary : theme.textMuted }}>BGM:{bgmEnabled ? 'ON' : 'OFF'}</button>
               <button onClick={() => setCompanionEnabled(!companionEnabled)} className="transition-colors duration-300 tracking-wider"
                 style={{ color: companionEnabled ? theme.textSecondary : theme.textMuted }}>AI:{companionEnabled ? 'ON' : 'OFF'}</button>
+              <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>¥{balance}</span>
             </div>
 
             {isHistoryView ? (
@@ -326,7 +329,7 @@ export default function MultiplayerRoomPage() {
             </div>
           )}
 
-          {(error || choiceFeedback || imageError) && (
+          {(error || choiceFeedback || (imageError && imageMode !== 'none')) && (
             <div className="text-xs text-center py-2 px-4 border rounded-sm"
               style={{ color: imageError ? '#d97706' : (choiceFeedback?.includes('accepted') || choiceFeedback?.includes('Your') ? theme.textSecondary : '#ef4444'),
                 borderColor: error || (choiceFeedback && !choiceFeedback.includes('accepted')) ? '#fecaca' : imageError ? '#fde68a' : theme.border }}>

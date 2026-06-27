@@ -3,6 +3,8 @@ import { getStore } from '@/lib/multiplayer/store'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
 import { GENRE_NAMES, Genre, type LLMConfig, type GameState, type StoryLength, type Mood, type ImageMode } from '@/lib/ai/types'
+import { getImagePrice } from '@/lib/credit/store'
+import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +52,18 @@ export async function POST(request: NextRequest) {
 
     let imageError = ''
     if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
-      try {
-        storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
-      } catch (imgErr: unknown) {
-        imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
-        console.error('Multiplayer start image error:', imageError)
+      const creditPrice = imageMode === 'full' ? getImagePrice('full') : getImagePrice('lazy')
+      const creditStore = getCreditStore()
+      const deduct = await creditStore.deductCredits(playerId, creditPrice, `多人开局-图片生成(${imageMode})`)
+      if (!deduct.success) {
+        imageError = deduct.reason || '余额不足'
+      } else {
+        try {
+          storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+        } catch (imgErr: unknown) {
+          imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
+          console.error('Multiplayer start image error:', imageError)
+        }
       }
     }
 

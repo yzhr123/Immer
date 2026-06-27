@@ -11,6 +11,7 @@ import ChoiceButton from '@/components/ChoiceButton'
 import BGMPlayer from '@/components/BGMPlayer'
 import ClueSidebar from '@/components/ClueSidebar'
 import CompanionBubble from '@/components/CompanionBubble'
+import { getUserId, useCredits } from '@/lib/credit/client'
 
 export default function GamePage() {
   const router = useRouter()
@@ -52,6 +53,8 @@ export default function GamePage() {
   const firstGenRef = useRef(false)
   const preGenRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+
+  const { balance } = useCredits()
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -228,6 +231,7 @@ export default function GamePage() {
           llmConfig: llmSettings,
           generateImage: imageMode === 'full',
           storyLength: game.storyLength,
+          userId: getUserId(),
         }),
         signal,
       })
@@ -239,7 +243,7 @@ export default function GamePage() {
 
       const data = await res.json()
 
-      if (data.imageError) {
+      if (data.imageError && imageMode !== 'none') {
         setImageError(data.imageError)
       }
 
@@ -298,7 +302,9 @@ export default function GamePage() {
           premise: game.premise,
           context: [],
           llmConfig: llmSettings,
+          generateImage: imageMode === 'full',
           storyLength: game.storyLength,
+          userId: getUserId(),
         }),
       })
       if (!res.ok) {
@@ -316,7 +322,7 @@ export default function GamePage() {
       )
       if (data.clues) addClues(data.clues)
       if (data.companion_thought) setCompanionState(data.companion_thought, data.companion_role || '')
-      if (data.imageError) setImageError(data.imageError)
+      if (data.imageError && imageMode !== 'none') setImageError(data.imageError)
       else setImageError('')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -367,6 +373,7 @@ export default function GamePage() {
         body: JSON.stringify({
           imagePrompt,
           imageModelId: llmSettings.imageModelId || '',
+          userId: getUserId(),
         }),
       })
       if (!res.ok) {
@@ -522,6 +529,9 @@ export default function GamePage() {
               >
                 AI:{companionEnabled ? 'ON' : 'OFF'}
               </button>
+              <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>
+                ¥{balance}
+              </span>
             </div>
 
             {isHistoryView ? (
@@ -630,7 +640,7 @@ export default function GamePage() {
                 <SceneImage url={display.scene.imageUrl} alt="Story scene" loading={imageLoading && !display.scene.imageUrl} />
               )}
 
-              {imageError && !isHistoryView && (
+              {imageError && !isHistoryView && imageMode !== 'none' && (
                 <div className="text-xs text-amber-500 text-center py-2 px-4 border border-amber-100 rounded-sm">
                   {imageError}
                 </div>
