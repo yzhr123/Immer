@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: ["192.168.2.3", "*.local"],
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+  },
 };
 
 export default nextConfig;
