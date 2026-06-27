@@ -27,7 +27,7 @@ const dict: Record<string, Record<Lang, string>> = {
     en: 'Scan the QR code with WeChat and enter the order number in the remark',
     zh: '微信扫码付款，备注中填写下方单号',
   },
-  'payment.remarkLabel': { en: 'Order number for remark', zh: '付款备注单号' },
+  'payment.remarkLabel': { en: 'Remark your email/contact to get redeem code', zh: '付款备注邮箱/联系方式获取充值码' },
   'payment.confirmBtn': { en: 'I have paid, confirm', zh: '我已付款确认' },
   'payment.cancelBtn': { en: 'Cancel', zh: '取消' },
   'payment.submitting': { en: 'Submitting...', zh: '提交中...' },

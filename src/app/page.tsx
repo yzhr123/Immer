@@ -7,8 +7,8 @@ import SettingsDialog from '@/components/SettingsDialog'
 import ImageModeSelector from '@/components/ImageModeSelector'
 import { useStore } from '@/lib/store'
 import { generateId } from '@/lib/utils'
-import { GENRE_TITLES, StoryLength, LENGTH_LABELS, ImageMode } from '@/lib/ai/types'
-import { fetchPendingCount, useCredits, generateOutTradeNo, submitManualPayment } from '@/lib/credit/client'
+import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
+import { useCredits, redeemCode, generateOutTradeNo } from '@/lib/credit/client'
 import { CREDIT_PRICES } from '@/lib/credit/store'
 import { t, Lang } from '@/lib/i18n'
 
@@ -20,23 +20,15 @@ export default function Lobby() {
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
 
-  const [pendingCount, setPendingCount] = useState(0)
   const { userId, balance, refresh: refreshBalance } = useCredits()
   const [paymentPhase, setPaymentPhase] = useState<
     { phase: 'idle' } |
-    { phase: 'new'; outTradeNo: string; amount: number } |
-    { phase: 'submitting' } |
-    { phase: 'submitted' } |
-    { phase: 'error'; message: string }
+    { phase: 'show'; outTradeNo: string; amount: number }
   >({ phase: 'idle' })
+  const [redeemCodeInput, setRedeemCodeInput] = useState('')
+  const [redeemStatus, setRedeemStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [customAmountMode, setCustomAmountMode] = useState(false)
   const [customAmount, setCustomAmount] = useState('')
-
-  useEffect(() => {
-    fetchPendingCount().then(setPendingCount)
-    const interval = setInterval(() => fetchPendingCount().then(setPendingCount), 15_000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') refreshBalance() }
@@ -87,25 +79,7 @@ export default function Lobby() {
   function handleStartRecharge(amount: number) {
     if (!userId) return
     const outTradeNo = generateOutTradeNo()
-    setPaymentPhase({ phase: 'new', outTradeNo, amount })
-  }
-
-  async function handleConfirmPayment() {
-    const state = paymentPhase
-    if (state.phase !== 'new') return
-    if (!userId) return
-
-    const { outTradeNo, amount } = state
-    setPaymentPhase({ phase: 'submitting' })
-
-    try {
-      await submitManualPayment(userId, amount, outTradeNo)
-      setPaymentPhase({ phase: 'submitted' })
-      setTimeout(refreshBalance, 2000)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '提交失败'
-      setPaymentPhase({ phase: 'error', message: msg })
-    }
+    setPaymentPhase({ phase: 'show', outTradeNo, amount })
   }
 
   function handleCustomRecharge() {
@@ -115,6 +89,26 @@ export default function Lobby() {
     setCustomAmount('')
     setCustomAmountMode(false)
   }
+
+  async function handleRedeemCode() {
+    const code = redeemCodeInput.trim()
+    if (!code || !userId) return
+    try {
+      const result = await redeemCode(userId, code)
+      setRedeemStatus({ type: 'success', message: language === 'zh' ? `充值成功，当前余额 ¥${result.balance}` : `Redeemed! Balance: ¥${result.balance}` })
+      setRedeemCodeInput('')
+      refreshBalance()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '兑换失败'
+      setRedeemStatus({ type: 'error', message: msg })
+    }
+  }
+
+  useEffect(() => {
+    if (!redeemStatus) return
+    const t = setTimeout(() => setRedeemStatus(null), 5000)
+    return () => clearTimeout(t)
+  }, [redeemStatus])
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center px-6">
@@ -203,7 +197,6 @@ export default function Lobby() {
           </button>
         </div>
 
-        {/* Credits / Recharge */}
         <div className="w-full border-t border-zinc-100 pt-4">
           <p className="text-center text-xs text-zinc-400 tracking-widest mb-3">
             {t('lobby.credits', language)}
@@ -254,8 +247,8 @@ export default function Lobby() {
             </div>
           )}
 
-          {paymentPhase.phase === 'new' && (
-            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center">
+          {paymentPhase.phase === 'show' && (
+            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center mb-3">
               <p className="text-xs text-zinc-500 mb-3">
                 {t('payment.wechatHint', language)}
               </p>
@@ -270,55 +263,38 @@ export default function Lobby() {
                   {paymentPhase.outTradeNo}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleConfirmPayment}
-                  className="flex-1 px-3 py-2 text-xs border border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-800 rounded transition-colors"
-                >
-                  {t('payment.confirmBtn', language)}
-                </button>
-                <button
-                  onClick={() => setPaymentPhase({ phase: 'idle' })}
-                  className="px-3 py-2 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-                >
-                  {t('payment.cancelBtn', language)}
-                </button>
-              </div>
+              <p className="text-[10px] text-zinc-400 mt-2">
+                {language === 'zh' ? '付款后联系管理员获取充值码' : 'After payment, contact admin for redeem code'}
+              </p>
             </div>
           )}
 
-          {paymentPhase.phase === 'submitting' && (
-            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center">
-              <div className="flex flex-col items-center gap-2 py-4">
-                <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-                <p className="text-xs text-zinc-500">{t('payment.submitting', language)}</p>
-              </div>
-            </div>
-          )}
+          <p className="text-center text-[10px] text-zinc-400 tracking-wider mb-2">
+            {language === 'zh' ? '有充值码？输入兑换' : 'Have a redeem code?'}
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={redeemCodeInput}
+              onChange={(e) => setRedeemCodeInput(e.target.value.toUpperCase())}
+              placeholder={language === 'zh' ? '输入充值码' : 'Enter redeem code'}
+              className="flex-1 px-3 py-1.5 text-xs border border-zinc-300 rounded focus:outline-none focus:border-zinc-500 transition-colors bg-transparent text-zinc-700 placeholder-zinc-300 uppercase"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRedeemCode() }}
+              maxLength={20}
+            />
+            <button
+              onClick={handleRedeemCode}
+              disabled={!redeemCodeInput.trim()}
+              className="px-4 py-1.5 text-xs border border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-800 rounded transition-colors disabled:opacity-40"
+            >
+              {language === 'zh' ? '兑换' : 'Redeem'}
+            </button>
+          </div>
 
-          {paymentPhase.phase === 'submitted' && (
-            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center">
-              <p className="text-xs text-amber-600 mb-1">{t('payment.submitted', language)}</p>
-              <p className="text-[10px] text-zinc-400">{t('payment.submittedHint', language)}</p>
-              <button
-                onClick={() => setPaymentPhase({ phase: 'idle' })}
-                className="mt-2 text-xs text-zinc-500 underline"
-              >
-                {t('payment.closeBtn', language)}
-              </button>
-            </div>
-          )}
-
-          {paymentPhase.phase === 'error' && (
-            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center">
-              <p className="text-xs text-red-500 mb-2">{paymentPhase.message}</p>
-              <button
-                onClick={() => setPaymentPhase({ phase: 'idle' })}
-                className="text-xs text-zinc-500 underline"
-              >
-                {t('payment.closeBtn', language)}
-              </button>
-            </div>
+          {redeemStatus && (
+            <p className={`text-xs mt-2 ${redeemStatus.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+              {redeemStatus.message}
+            </p>
           )}
         </div>
 
@@ -338,28 +314,15 @@ export default function Lobby() {
       </div>
       {/* Bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-100 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-lg mx-auto flex items-center justify-between px-6 py-2">
+        <div className="max-w-lg mx-auto flex items-center justify-center px-6 py-2">
           <button
-            onClick={() => router.push('/admin')}
+            onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
             className="text-[10px] text-zinc-300 hover:text-zinc-600 transition-colors tracking-wider"
           >
-            {t('lobby.admin', language)}
+            {language === 'en' ? '中文' : 'En'}
           </button>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-              className="text-[10px] text-zinc-300 hover:text-zinc-600 transition-colors tracking-wider"
-            >
-              {language === 'en' ? '中文' : 'En'}
-            </button>
-            {pendingCount > 0 && (
-            <span className="text-[10px] text-amber-500 tracking-wider">
-              {t('lobby.pendingCount', language, { n: pendingCount })}
-            </span>
-          )}
         </div>
       </div>
-    </div>
     </div>
   )
 }

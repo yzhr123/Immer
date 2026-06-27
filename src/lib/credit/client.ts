@@ -151,6 +151,19 @@ export async function fetchPendingCount(): Promise<number> {
   }
 }
 
+export async function redeemCode(userId: string, code: string): Promise<{ balance: number }> {
+  const res = await fetch('/api/credit/redeem', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, code }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error((data as any).error || '充值码无效')
+  }
+  return res.json()
+}
+
 export function useCredits() {
   const userId = getUserId()
   const [balance, setBalance] = useState(0)
