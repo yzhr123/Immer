@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
-import { StoryResponse, LLMConfig, Mood } from './types'
+import { StoryResponse, LLMConfig, Mood, Clue } from './types'
 
-function parseStoryResponse(raw: string): StoryResponse {
+function parseStoryResponse(raw: string, sceneId: string): StoryResponse {
   const cleaned = raw
     .replace(/```(?:json)?\s*/g, '')
     .replace(/\s*```/g, '')
@@ -12,17 +12,32 @@ function parseStoryResponse(raw: string): StoryResponse {
   const validMoods: Mood[] = ['dark', 'mysterious', 'tense', 'peaceful', 'epic', 'sad', 'joyful', 'scary', 'calm']
   const mood = validMoods.includes(parsed.mood) ? parsed.mood as Mood : 'calm'
 
+  const clues: Clue[] = (parsed.clues || []).map((c: any, i: number) => ({
+    id: c.id || `clue_${sceneId}_${i}`,
+    type: c.type || 'note',
+    title: c.title || '',
+    summary: c.summary || '',
+    content: c.content || '',
+    sceneId: sceneId,
+  }))
+
   return {
     scene: {
-      id: crypto.randomUUID?.() || Math.random().toString(36).slice(2),
+      id: sceneId,
       narrative: parsed.narrative,
       imageUrl: '',
       imagePrompt: parsed.image_prompt,
+      clues,
     },
     choices: parsed.choices || [],
     mood,
     isEnding: parsed.is_ending || false,
     endingText: parsed.ending_text || null,
+    endingTitle: parsed.ending_title || '',
+    keywords: parsed.keywords || [],
+    clues,
+    companion_thought: parsed.companion_thought || '',
+    companion_role: parsed.companion_role || '',
   }
 }
 
@@ -51,7 +66,8 @@ export async function generateStory(
     throw new Error('LLM returned empty response')
   }
 
-  return parseStoryResponse(content)
+  const sceneId = crypto.randomUUID?.() || Math.random().toString(36).slice(2)
+  return parseStoryResponse(content, sceneId)
 }
 
 export async function generateImage(prompt: string, modelId?: string): Promise<string> {

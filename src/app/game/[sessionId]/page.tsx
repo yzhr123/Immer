@@ -9,6 +9,8 @@ import SceneImage from '@/components/SceneImage'
 import NarrativeText from '@/components/NarrativeText'
 import ChoiceButton from '@/components/ChoiceButton'
 import BGMPlayer from '@/components/BGMPlayer'
+import ClueSidebar from '@/components/ClueSidebar'
+import CompanionBubble from '@/components/CompanionBubble'
 
 export default function GamePage() {
   const router = useRouter()
@@ -26,6 +28,10 @@ export default function GamePage() {
     setBgmEnabled,
     imageMode,
     updateSceneImage,
+    addClues,
+    setCompanionState,
+    companionEnabled,
+    setCompanionEnabled,
   } = useStore()
 
   const sessionId = params?.sessionId as string
@@ -38,10 +44,16 @@ export default function GamePage() {
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
+  const [endingPhase, setEndingPhase] = useState<'none' | 'fade' | 'typing' | 'end'>('none')
+  const [revealedText, setRevealedText] = useState('')
+  const [typingComplete, setTypingComplete] = useState(false)
+  const revealRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const firstGenRef = useRef(false)
   const preGenRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+
+  const isHistoryView = viewingHistoryIndex !== null
 
   const onTypingDone = useCallback(() => setTypingDone(true), [])
 
@@ -105,6 +117,61 @@ export default function GamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branches])
 
+  // --- ending performance sequence ---
+  useEffect(() => {
+    if (game?.status !== 'completed' || !typingDone || isHistoryView || endingPhase !== 'none') return
+
+    const t1 = setTimeout(() => setEndingPhase('fade'), 800)
+    return () => clearTimeout(t1)
+  }, [game?.status, typingDone, isHistoryView])
+
+  useEffect(() => {
+    if (endingPhase !== 'fade') return
+    const next = game?.endingText ? 'typing' as const : 'end' as const
+    const t = setTimeout(() => setEndingPhase(next), 1500)
+    return () => clearTimeout(t)
+  }, [endingPhase, game?.endingText])
+
+  useEffect(() => {
+    if (endingPhase !== 'typing' || !game?.endingText) return
+    let i = 0
+    setTypingComplete(false)
+    revealRef.current = setInterval(() => {
+      i++
+      setRevealedText(game.endingText!.slice(0, i))
+      if (i >= game.endingText!.length) {
+        clearInterval(revealRef.current!)
+        revealRef.current = null
+        setTypingComplete(true)
+      }
+    }, 50)
+    return () => {
+      if (revealRef.current) clearInterval(revealRef.current)
+    }
+  }, [endingPhase, game?.endingText])
+
+  // --- keyboard navigation ---
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!game || game.history.length === 0) return
+      if (e.key === 'ArrowLeft') {
+        if (viewingHistoryIndex === null) {
+          setViewingHistoryIndex(game.history.length - 1)
+        } else if (viewingHistoryIndex > 0) {
+          setViewingHistoryIndex(viewingHistoryIndex - 1)
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (viewingHistoryIndex === null) {
+          setViewingHistoryIndex(0)
+        } else if (viewingHistoryIndex < game.history.length - 1) {
+          setViewingHistoryIndex(viewingHistoryIndex + 1)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [game, viewingHistoryIndex])
+
   // --- helpers ---
 
   function startPreGen() {
@@ -127,6 +194,11 @@ export default function GamePage() {
         mood: 'calm' as Mood,
         isEnding: false,
         endingText: null,
+        endingTitle: '',
+        keywords: [],
+        clues: [],
+        companionThought: '',
+        companionRole: '',
         status: 'generating',
       }
     })
@@ -155,6 +227,7 @@ export default function GamePage() {
           choice: { id: choiceId, text: choiceText },
           llmConfig: llmSettings,
           generateImage: imageMode === 'full',
+          storyLength: game.storyLength,
         }),
         signal,
       })
@@ -180,6 +253,11 @@ export default function GamePage() {
           mood: data.mood || 'calm',
           isEnding: data.isEnding || false,
           endingText: data.endingText || null,
+          endingTitle: data.endingTitle || '',
+          keywords: data.keywords || [],
+          clues: data.clues || [],
+          companionThought: data.companion_thought || '',
+          companionRole: data.companion_role || '',
           status: 'ready' as const,
         },
       }))
@@ -196,6 +274,11 @@ export default function GamePage() {
           mood: 'calm' as Mood,
           isEnding: false,
           endingText: null,
+          endingTitle: '',
+          keywords: [],
+          clues: [],
+          companionThought: '',
+          companionRole: '',
           status: 'error' as const,
           error: msg,
         },
@@ -215,6 +298,7 @@ export default function GamePage() {
           premise: game.premise,
           context: [],
           llmConfig: llmSettings,
+          storyLength: game.storyLength,
         }),
       })
       if (!res.ok) {
@@ -228,7 +312,10 @@ export default function GamePage() {
         data.mood || 'calm',
         data.isEnding,
         data.endingText,
+        data.endingTitle,
       )
+      if (data.clues) addClues(data.clues)
+      if (data.companion_thought) setCompanionState(data.companion_thought, data.companion_role || '')
       if (data.imageError) setImageError(data.imageError)
       else setImageError('')
     } catch (err: unknown) {
@@ -249,15 +336,21 @@ export default function GamePage() {
         sceneId: game?.currentScene?.id || '',
         choiceId,
         choiceText: branch.choiceText,
+        mood: game?.currentMood || 'calm' as Mood,
       },
       isEnding: branch.isEnding,
       endingText: branch.endingText,
+      endingTitle: branch.endingTitle,
     })
 
     setBranches({})
     setWaitingFor(null)
     setViewingHistoryIndex(null)
+    setTypingDone(false)
     saveCurrentGame()
+
+    if (branch.clues) addClues(branch.clues)
+    if (branch.companionThought) setCompanionState(branch.companionThought, branch.companionRole)
 
     // lazy mode: generate image for the new scene after text shows
     if (imageMode === 'lazy' && branch.scene.imagePrompt && !branch.scene.imageUrl) {
@@ -319,7 +412,7 @@ export default function GamePage() {
     }
     const scene = game.completedScenes[viewingHistoryIndex]
     const choice = game.history[viewingHistoryIndex]
-    return { scene: scene ?? null, choice: choice ?? null, historyMood: null }
+    return { scene: scene ?? null, choice: choice ?? null, historyMood: (choice?.mood as Mood) ?? null }
   }
 
   function handleHistorySelect(index: number) {
@@ -334,14 +427,13 @@ export default function GamePage() {
   const readyCount = Object.values(branches).filter((b) => b.status === 'ready').length
   const totalBranches = Object.keys(branches).length
   const display = getDisplayScene()
-  const isHistoryView = viewingHistoryIndex !== null
 
   return (
     <>
-      {game.currentScene && <BGMPlayer mood={currentMood} enabled={bgmEnabled} />}
+      {game.currentScene && <BGMPlayer mood={isHistoryView && display.historyMood ? display.historyMood : currentMood} enabled={bgmEnabled} />}
 
       <div
-        className="flex flex-col flex-1 items-center px-6 py-8 transition-all duration-700"
+        className={"flex flex-col flex-1 items-center px-6 py-8 transition-all duration-700" + (isHistoryView ? " pb-20" : "")}
         style={{
           backgroundColor: theme.bg,
           color: theme.text,
@@ -420,6 +512,15 @@ export default function GamePage() {
                 onMouseLeave={(e) => e.currentTarget.style.color = bgmEnabled ? theme.textSecondary : theme.textMuted}
               >
                 BGM:{bgmEnabled ? 'ON' : 'OFF'}
+              </button>
+              <button
+                onClick={() => setCompanionEnabled(!companionEnabled)}
+                className="transition-colors duration-300 tracking-wider"
+                style={{ color: companionEnabled ? theme.textSecondary : theme.textMuted }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.text}
+                onMouseLeave={(e) => e.currentTarget.style.color = companionEnabled ? theme.textSecondary : theme.textMuted}
+              >
+                AI:{companionEnabled ? 'ON' : 'OFF'}
               </button>
             </div>
 
@@ -526,8 +627,8 @@ export default function GamePage() {
           {display.scene && (
             <>
               {display.scene && imageMode !== 'none' && (
-            <SceneImage url={display.scene.imageUrl} alt="Story scene" loading={imageLoading && !display.scene.imageUrl} />
-          )}
+                <SceneImage url={display.scene.imageUrl} alt="Story scene" loading={imageLoading && !display.scene.imageUrl} />
+              )}
 
               {imageError && !isHistoryView && (
                 <div className="text-xs text-amber-500 text-center py-2 px-4 border border-amber-100 rounded-sm">
@@ -567,49 +668,6 @@ export default function GamePage() {
                   >
                     → {display.choice.choiceText}
                   </div>
-                </div>
-              )}
-
-              {/* history: navigation at bottom */}
-              {isHistoryView && (
-                <div className="flex items-center justify-between px-1 mt-4">
-                  <button
-                    onClick={() => setViewingHistoryIndex((prev) =>
-                      prev !== null ? Math.max(0, prev - 1) : 0
-                    )}
-                    disabled={viewingHistoryIndex === 0}
-                    className="text-xs tracking-wider transition-colors duration-300 disabled:opacity-20"
-                    style={{ color: theme.textMuted }}
-                    onMouseEnter={(e) => {
-                      if (viewingHistoryIndex !== 0) e.currentTarget.style.color = theme.text
-                    }}
-                    onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
-                  >
-                    &lt; PREV
-                  </button>
-                  <button
-                    onClick={() => setViewingHistoryIndex(null)}
-                    className="text-xs tracking-wider transition-colors duration-300"
-                    style={{ color: theme.textSecondary }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = theme.text}
-                    onMouseLeave={(e) => e.currentTarget.style.color = theme.textSecondary}
-                  >
-                    BACK TO CURRENT
-                  </button>
-                  <button
-                    onClick={() => setViewingHistoryIndex((prev) =>
-                      prev !== null ? Math.min(game.history.length - 1, prev + 1) : game.history.length - 1
-                    )}
-                    disabled={viewingHistoryIndex === game.history.length - 1}
-                    className="text-xs tracking-wider transition-colors duration-300 disabled:opacity-20"
-                    style={{ color: theme.textMuted }}
-                    onMouseEnter={(e) => {
-                      if (viewingHistoryIndex !== game.history.length - 1) e.currentTarget.style.color = theme.text
-                    }}
-                    onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
-                  >
-                    NEXT &gt;
-                  </button>
                 </div>
               )}
 
@@ -659,40 +717,138 @@ export default function GamePage() {
                   </div>
                 </div>
               )}
-
-              {/* ending */}
-              {!isHistoryView && game.status === 'completed' && game.endingText && typingDone && (
-                <div className="mt-8 px-1 space-y-6">
-                  <div className="pt-6" style={{ borderTop: `1px solid ${theme.border}` }}>
-                    <p className="text-xs mb-3 tracking-widest" style={{ color: theme.textMuted }}>
-                      EPILOGUE
-                    </p>
-                    <NarrativeText text={game.endingText} onComplete={() => { }} textColor={theme.text} />
-                  </div>
-                  <button
-                    onClick={handleRestart}
-                    className="w-full py-3.5 text-sm tracking-widest transition-all duration-200 rounded-none"
-                    style={{
-                      border: `1px solid ${theme.border}`,
-                      color: theme.textSecondary,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = theme.choiceBorderHover
-                      e.currentTarget.style.color = theme.text
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.border
-                      e.currentTarget.style.color = theme.textSecondary
-                    }}
-                  >
-                    START A NEW STORY
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>
       </div>
+
+      {/* ending performance overlay */}
+      {endingPhase !== 'none' && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+          style={{
+            opacity: endingPhase === 'fade' ? 0 : 1,
+            transition: 'opacity 1.5s ease-in-out',
+          }}
+        >
+          {/* typing: truth reveal */}
+          {endingPhase === 'typing' && (
+            <div
+              className="max-w-2xl px-8 text-center"
+              onClick={typingComplete ? () => setEndingPhase('end') : undefined}
+            >
+              <div className="text-base leading-relaxed whitespace-pre-wrap text-white">
+                {revealedText}
+                {!typingComplete && <span className="animate-pulse text-white/50">▌</span>}
+              </div>
+              {typingComplete && (
+                <p className="text-xs text-white/40 tracking-wider mt-8 animate-fade-in-up">
+                  CLICK ANYWHERE TO CONTINUE
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* the end */}
+          {endingPhase === 'end' && (
+            <div className="text-center z-10 animate-fade-in-up">
+              <h1 className="text-3xl tracking-[0.3em] text-white mb-6 font-light">
+                THE END
+              </h1>
+              <p className="text-base tracking-widest mb-12 text-white/70 italic">
+                「{game?.endingTitle || game?.title}」
+              </p>
+              <button
+                onClick={handleRestart}
+                className="px-8 py-3 text-xs tracking-widest transition-all duration-200 border"
+                style={{
+                  borderColor: theme.border,
+                  color: theme.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#fff'
+                  e.currentTarget.style.color = '#fff'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = theme.border
+                  e.currentTarget.style.color = theme.textSecondary
+                }}
+              >
+                START A NEW STORY
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {game.currentScene && <ClueSidebar
+        clues={game.clues}
+        themeBorder={theme.border}
+        themeBgCard={theme.bgCard}
+        themeText={theme.text}
+        themeTextSecondary={theme.textSecondary}
+        themeTextMuted={theme.textMuted}
+      />}
+
+      <CompanionBubble
+        thought={game.companionThought}
+        role={game.companionRole}
+        enabled={companionEnabled}
+        themeBorder={theme.border}
+        themeBgCard={theme.bgCard}
+        themeText={theme.text}
+        themeTextMuted={theme.textMuted}
+        bottomNav={isHistoryView}
+      />
+
+      {/* fixed bottom navigation bar for history view */}
+      {isHistoryView && game.history.length > 0 && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-8 py-4 px-6 border-t"
+          style={{
+            backgroundColor: theme.bg,
+            borderColor: theme.border,
+          }}
+        >
+          <button
+            onClick={() => setViewingHistoryIndex((prev) =>
+              prev !== null ? Math.max(0, prev - 1) : 0
+            )}
+            disabled={viewingHistoryIndex === 0}
+            className="text-sm tracking-wider transition-colors duration-300 disabled:opacity-20"
+            style={{ color: theme.textMuted }}
+            onMouseEnter={(e) => {
+              if (viewingHistoryIndex !== 0) e.currentTarget.style.color = theme.text
+            }}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
+          >
+            &lt; PREV
+          </button>
+          <button
+            onClick={() => setViewingHistoryIndex(null)}
+            className="text-sm tracking-wider transition-colors duration-300"
+            style={{ color: theme.textSecondary }}
+            onMouseEnter={(e) => e.currentTarget.style.color = theme.text}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.textSecondary}
+          >
+            BACK TO CURRENT
+          </button>
+          <button
+            onClick={() => setViewingHistoryIndex((prev) =>
+              prev !== null ? Math.min(game.history.length - 1, prev + 1) : game.history.length - 1
+            )}
+            disabled={viewingHistoryIndex === game.history.length - 1}
+            className="text-sm tracking-wider transition-colors duration-300 disabled:opacity-20"
+            style={{ color: theme.textMuted }}
+            onMouseEnter={(e) => {
+              if (viewingHistoryIndex !== game.history.length - 1) e.currentTarget.style.color = theme.text
+            }}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.textMuted}
+          >
+            NEXT &gt;
+          </button>
+        </div>
+      )}
     </>
   )
 }

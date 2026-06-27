@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const llmConfig = body.llmConfig
     const imageModelId = body.imageModelId as string | undefined
     const generateImageParam = body.generateImage !== false
+    const storyLength = body.storyLength as string | undefined
 
     if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
       return NextResponse.json(
@@ -23,8 +24,9 @@ export async function POST(request: NextRequest) {
     }
 
     const genreName = GENRE_NAMES[genre as Genre] || genre
-    const systemPrompt = buildSystemPrompt(genreName)
-    const userPrompt = buildUserPrompt(genreName, premise, context, choice)
+    const systemPrompt = buildSystemPrompt(genreName, storyLength)
+    const sceneCount = context.length + (choice ? 1 : 0)
+    const userPrompt = buildUserPrompt(genreName, premise, context, choice, storyLength, sceneCount)
 
     const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)
 

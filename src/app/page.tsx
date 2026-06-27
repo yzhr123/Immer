@@ -6,13 +6,14 @@ import GenreSelector from '@/components/GenreSelector'
 import SettingsDialog from '@/components/SettingsDialog'
 import { useStore } from '@/lib/store'
 import { generateId } from '@/lib/utils'
-import { Genre, GENRE_TITLES } from '@/lib/ai/types'
+import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
 
 export default function Lobby() {
   const router = useRouter()
   const { llmSettings, initGame, savedGames, refreshSavedGames } = useStore()
-  const [genre, setGenre] = useState<Genre | null>(null)
+  const [genre, setGenre] = useState<string | null>(null)
   const [premise, setPremise] = useState('')
+  const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
 
   function handleStart() {
@@ -30,6 +31,7 @@ export default function Lobby() {
       genre,
       title: GENRE_TITLES[genre] || genre,
       premise,
+      storyLength,
     })
 
     router.push(`/game/${sessionId}`)
@@ -55,6 +57,28 @@ export default function Lobby() {
             SELECT GENRE
           </p>
           <GenreSelector selected={genre} onSelect={setGenre} />
+        </div>
+
+        {/* Story Length */}
+        <div className="w-full space-y-3">
+          <p className="text-center text-xs text-zinc-400 tracking-widest">
+            STORY LENGTH
+          </p>
+          <div className="flex justify-center gap-3">
+            {(['short', 'medium', 'long'] as StoryLength[]).map((len) => (
+              <button
+                key={len}
+                onClick={() => setStoryLength(len)}
+                className={`px-5 py-2 text-xs tracking-wider transition-all duration-200 rounded-sm ${
+                  storyLength === len
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 border border-zinc-200 hover:border-zinc-400'
+                }`}
+              >
+                {LENGTH_LABELS[len]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Premise Input */}
