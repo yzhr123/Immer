@@ -9,11 +9,13 @@ import {
   Choice,
   ContextEntry,
   Mood,
+  ImageMode,
 } from './ai/types'
 
 const LLM_SETTINGS_KEY = 'immer_llm_settings'
 const SAVED_GAMES_KEY = 'immer_saved_games'
 const BGM_KEY = 'immer_bgm_enabled'
+const IMAGE_MODE_KEY = 'immer_image_mode'
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -46,6 +48,8 @@ interface AppStore {
   setLLMSettings: (settings: LLMSettings) => void
   bgmEnabled: boolean
   setBgmEnabled: (v: boolean) => void
+  imageMode: ImageMode
+  setImageMode: (v: ImageMode) => void
   game: GameState | null
   savedGames: SavedGameMeta[]
 
@@ -73,6 +77,7 @@ interface AppStore {
     endingText: string | null
   }) => void
 
+  updateSceneImage: (imageUrl: string) => void
   saveCurrentGame: () => void
   loadGame: (sessionId: string) => GameState | null
   deleteGame: (sessionId: string) => void
@@ -88,11 +93,17 @@ export const useStore = create<AppStore>((set, get) => ({
   }),
   game: null,
   bgmEnabled: loadJson<boolean>(BGM_KEY, true),
+  imageMode: loadJson<ImageMode>(IMAGE_MODE_KEY, 'full'),
   savedGames: [],
 
   setBgmEnabled: (v) => {
     saveJson(BGM_KEY, v)
     set({ bgmEnabled: v })
+  },
+
+  setImageMode: (v) => {
+    saveJson(IMAGE_MODE_KEY, v)
+    set({ imageMode: v })
   },
 
   setLLMSettings: (settings) => {
@@ -151,6 +162,17 @@ export const useStore = create<AppStore>((set, get) => ({
         status: params.isEnding ? 'completed' as const : 'playing' as const,
         endingText: params.endingText,
         lastPlayedAt: Date.now(),
+      },
+    })
+  },
+
+  updateSceneImage: (imageUrl) => {
+    const { game } = get()
+    if (!game || !game.currentScene) return
+    set({
+      game: {
+        ...game,
+        currentScene: { ...game.currentScene, imageUrl },
       },
     })
   },

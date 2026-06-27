@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useStore } from '@/lib/store'
+import type { ImageMode } from '@/lib/ai/types'
 
 export default function SettingsDialog() {
-  const { llmSettings, setLLMSettings } = useStore()
+  const { llmSettings, setLLMSettings, imageMode, setImageMode } = useStore()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ ...llmSettings })
 
@@ -86,6 +87,34 @@ export default function SettingsDialog() {
                   placeholder="doubao-seedream-5-0-260128"
                   className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-md focus:outline-none focus:border-zinc-400 transition-colors bg-white text-zinc-800 placeholder-zinc-300"
                 />
+              </div>
+
+              <div className="border-t border-zinc-100 pt-4 mt-4">
+                <label className="block text-xs text-zinc-500 mb-3 tracking-wide">
+                  Image Mode
+                </label>
+                <div className="flex gap-4">
+                  {(['full', 'lazy', 'none'] as ImageMode[]).map((mode) => (
+                    <label
+                      key={mode}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-xs tracking-wider transition-colors ${
+                        imageMode === mode
+                          ? 'bg-zinc-800 text-white'
+                          : 'bg-zinc-50 text-zinc-500 hover:text-zinc-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="imageMode"
+                        value={mode}
+                        checked={imageMode === mode}
+                        onChange={() => setImageMode(mode)}
+                        className="sr-only"
+                      />
+                      {mode === 'full' ? 'Full' : mode === 'lazy' ? 'Lazy' : 'None'}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 

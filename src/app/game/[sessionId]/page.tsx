@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useStore, buildContext } from '@/lib/store'
-import { BranchState, ContextEntry, Mood } from '@/lib/ai/types'
+import { BranchState, ContextEntry, Mood, ImageMode } from '@/lib/ai/types'
 import { getTheme } from '@/lib/theme'
 import SceneImage from '@/components/SceneImage'
 import NarrativeText from '@/components/NarrativeText'
@@ -24,6 +24,8 @@ export default function GamePage() {
     loadGame,
     bgmEnabled,
     setBgmEnabled,
+    imageMode,
+    updateSceneImage,
   } = useStore()
 
   const sessionId = params?.sessionId as string
@@ -35,6 +37,7 @@ export default function GamePage() {
   const [branches, setBranches] = useState<Record<string, BranchState>>({})
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
+  const [imageLoading, setImageLoading] = useState(false)
 
   const firstGenRef = useRef(false)
   const preGenRef = useRef(false)
@@ -151,6 +154,7 @@ export default function GamePage() {
           context,
           choice: { id: choiceId, text: choiceText },
           llmConfig: llmSettings,
+          generateImage: imageMode === 'full',
         }),
         signal,
       })
@@ -254,6 +258,38 @@ export default function GamePage() {
     setWaitingFor(null)
     setViewingHistoryIndex(null)
     saveCurrentGame()
+
+    // lazy mode: generate image for the new scene after text shows
+    if (imageMode === 'lazy' && branch.scene.imagePrompt && !branch.scene.imageUrl) {
+      setImageLoading(true)
+      generateLazyImage(branch.scene.imagePrompt)
+    }
+  }
+
+  async function generateLazyImage(imagePrompt: string) {
+    try {
+      const res = await fetch('/api/story/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imagePrompt,
+          imageModelId: llmSettings.imageModelId || '',
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error((data as any).error || 'Image generation failed')
+      }
+      const data = await res.json()
+      if (data.imageUrl) {
+        updateSceneImage(data.imageUrl)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setError(msg)
+    } finally {
+      setImageLoading(false)
+    }
   }
 
   function handleChoice(choiceId: string) {
@@ -489,7 +525,9 @@ export default function GamePage() {
           {/* scene content */}
           {display.scene && (
             <>
-              <SceneImage url={display.scene.imageUrl} alt="Story scene" />
+              {display.scene && imageMode !== 'none' && (
+            <SceneImage url={display.scene.imageUrl} alt="Story scene" loading={imageLoading && !display.scene.imageUrl} />
+          )}
 
               {imageError && !isHistoryView && (
                 <div className="text-xs text-amber-500 text-center py-2 px-4 border border-amber-100 rounded-sm">

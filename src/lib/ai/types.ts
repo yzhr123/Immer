@@ -100,6 +100,8 @@ export type Genre =
   | 'horror'
   | 'martial-arts'
 
+export type ImageMode = 'full' | 'lazy' | 'none'
+
 export const GENRE_NAMES: Record<Genre, string> = {
   fantasy: '奇幻',
   'sci-fi': '科幻',

@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const choice = body.choice as { id: string; text: string } | undefined
     const llmConfig = body.llmConfig
     const imageModelId = body.imageModelId as string | undefined
+    const generateImageParam = body.generateImage !== false
 
     if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
       return NextResponse.json(
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     let imageUrl = ''
     let imageError = ''
-    if (storyResult.scene.imagePrompt) {
+    if (generateImageParam && storyResult.scene.imagePrompt) {
       try {
         imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
       } catch (imgErr: unknown) {

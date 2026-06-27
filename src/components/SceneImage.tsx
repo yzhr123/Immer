@@ -3,14 +3,21 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
-export default function SceneImage({ url, alt }: { url: string; alt: string }) {
+export default function SceneImage({ url, alt, loading }: { url: string; alt: string; loading?: boolean }) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
 
   if (!url || error) {
     return (
       <div className="w-full aspect-[16/9] bg-zinc-50 rounded-sm border border-zinc-100 flex items-center justify-center">
-        <span className="text-xs text-zinc-300 tracking-wider">NO IMAGE</span>
+        {loading ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-400 rounded-full animate-spin" />
+            <span className="text-xs text-zinc-300 tracking-wider">GENERATING IMAGE...</span>
+          </div>
+        ) : (
+          <span className="text-xs text-zinc-300 tracking-wider">NO IMAGE</span>
+        )}
       </div>
     )
   }
