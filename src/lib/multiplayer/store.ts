@@ -70,6 +70,10 @@ export class MemoryStore implements MultiplayerStore {
       lockedUntil: null,
       resolvedChoiceId: null,
       gameState: null,
+      genre: req.genre,
+      title: req.title,
+      premise: req.premise,
+      storyLength: req.storyLength,
       createdAt: now,
       lastActivityAt: now,
     }

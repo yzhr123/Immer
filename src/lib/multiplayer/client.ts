@@ -12,7 +12,7 @@ import type {
   SubmitChoiceResponse,
   PollStateResponse,
 } from './types'
-import type { LLMConfig } from '@/lib/ai/types'
+import type { LLMConfig, ImageMode } from '@/lib/ai/types'
 
 /* ============================================================
  *  Storage keys
@@ -74,13 +74,19 @@ export async function apiJoinRoom(req: JoinRoomRequest): Promise<JoinRoomRespons
 }
 
 export async function apiSubmitChoice(
-  req: SubmitChoiceRequest & { llmConfig: LLMConfig },
+  req: SubmitChoiceRequest & { llmConfig: LLMConfig; imageMode?: ImageMode; imageModelId?: string },
 ): Promise<SubmitChoiceResponse> {
   return apiPost<SubmitChoiceResponse>('/api/multiplayer/choice', req)
 }
 
-export async function apiStartGame(roomCode: string, playerId: string, llmConfig: LLMConfig): Promise<{ room: MPRoom }> {
-  return apiPost('/api/multiplayer/start', { roomCode, playerId, llmConfig })
+export async function apiStartGame(
+  roomCode: string,
+  playerId: string,
+  llmConfig: LLMConfig,
+  imageMode?: ImageMode,
+  imageModelId?: string,
+): Promise<{ room: MPRoom }> {
+  return apiPost('/api/multiplayer/start', { roomCode, playerId, llmConfig, imageMode, imageModelId })
 }
 
 export async function apiPollState(roomCode: string): Promise<PollStateResponse> {
@@ -256,7 +262,8 @@ export function useMultiplayer(options?: UseMultiplayerOptions): UseMultiplayerR
     setError(null)
     try {
       const llmConfig = loadLLMSettings()
-      const result = await apiStartGame(roomCode, playerId, llmConfig)
+      const imagePrefs = loadImagePrefs()
+      const result = await apiStartGame(roomCode, playerId, llmConfig, imagePrefs.imageMode, imagePrefs.imageModelId)
       setRoom(result.room)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '开始游戏失败'
@@ -276,12 +283,15 @@ export function useMultiplayer(options?: UseMultiplayerOptions): UseMultiplayerR
     try {
       // Get LLM config from localStorage (same as single-player)
       const llmSettings = loadLLMSettings()
+      const imagePrefs = loadImagePrefs()
 
       const result = await apiSubmitChoice({
         roomCode,
         playerId,
         choiceId,
         llmConfig: llmSettings,
+        imageMode: imagePrefs.imageMode,
+        imageModelId: imagePrefs.imageModelId,
       })
 
       if (result.accepted && result.room) {
@@ -340,5 +350,18 @@ function loadLLMSettings(): LLMConfig {
     return JSON.parse(raw)
   } catch {
     return { apiUrl: '', model: '', apiKey: '' }
+  }
+}
+
+function loadImagePrefs(): { imageMode: ImageMode; imageModelId?: string } {
+  if (typeof window === 'undefined') return { imageMode: 'full' }
+  try {
+    const raw = localStorage.getItem('immer_image_mode')
+    const imageMode: ImageMode = raw ? JSON.parse(raw) : 'full'
+    const llmRaw = localStorage.getItem('immer_llm_settings')
+    const llm = llmRaw ? JSON.parse(llmRaw) : {}
+    return { imageMode, imageModelId: llm.imageModelId || '' }
+  } catch {
+    return { imageMode: 'full' }
   }
 }

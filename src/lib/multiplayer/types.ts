@@ -1,4 +1,4 @@
-import type { GameState, Mood, StoryLength, Genre } from '@/lib/ai/types'
+import type { GameState, Mood, StoryLength, Genre, ImageMode } from '@/lib/ai/types'
 
 export interface MPPlayer {
   id: string
@@ -19,6 +19,11 @@ export interface MPRoom {
   resolvedChoiceId: string | null
   /** The shared game state (same shape as single-player) */
   gameState: GameState | null
+  /** Story metadata (set at creation, used by start route) */
+  genre: string
+  title: string
+  premise: string
+  storyLength: StoryLength
   createdAt: number
   lastActivityAt: number
 }

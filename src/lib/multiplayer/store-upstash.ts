@@ -10,7 +10,7 @@
  *   npm install @upstash/redis
  */
 
-import type { GameState } from '@/lib/ai/types'
+import type { GameState, StoryLength } from '@/lib/ai/types'
 import type { MPRoom, MPPlayer, RoomStatus, CreateRoomRequest } from './types'
 import type { MultiplayerStore } from './store'
 
@@ -72,6 +72,10 @@ export class UpstashStore implements MultiplayerStore {
       lockedUntil: null,
       resolvedChoiceId: null,
       gameState: null,
+      genre: req.genre,
+      title: req.title,
+      premise: req.premise,
+      storyLength: req.storyLength,
       createdAt: now,
       lastActivityAt: now,
     }

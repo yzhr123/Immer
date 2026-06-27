@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStore } from '@/lib/multiplayer/store'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
-import { generateStory } from '@/lib/ai/client'
-import { GENRE_NAMES, Genre, type LLMConfig, type GameState, type StoryLength, type Mood } from '@/lib/ai/types'
+import { generateStory, generateImage } from '@/lib/ai/client'
+import { GENRE_NAMES, Genre, type LLMConfig, type GameState, type StoryLength, type Mood, type ImageMode } from '@/lib/ai/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,9 +10,11 @@ export async function POST(request: NextRequest) {
       roomCode: string
       playerId: string
       llmConfig: LLMConfig
+      imageMode?: ImageMode
+      imageModelId?: string
     } = await request.json()
 
-    const { roomCode, playerId, llmConfig } = body
+    const { roomCode, playerId, llmConfig, imageMode = 'full', imageModelId } = body
 
     if (!roomCode || !playerId) {
       return NextResponse.json({ error: '参数不完整' }, { status: 400 })
@@ -36,10 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '至少需要一名玩家' }, { status: 400 })
     }
 
-    // Generate the first scene
-    const genre = room.gameState?.genre || 'mystery'
-    const premise = room.gameState?.premise || ''
-    const storyLength = room.gameState?.storyLength || 'medium'
+    const genre = room.genre || 'mystery'
+    const premise = room.premise || ''
+    const storyLength = room.storyLength || 'medium'
     const genreName = GENRE_NAMES[genre as Genre] || genre
 
     const systemPrompt = buildSystemPrompt(genreName, storyLength)
@@ -47,11 +48,21 @@ export async function POST(request: NextRequest) {
 
     const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)
 
+    let imageError = ''
+    if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
+      try {
+        storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+      } catch (imgErr: unknown) {
+        imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
+        console.error('Multiplayer start image error:', imageError)
+      }
+    }
+
     const now = Date.now()
     const gameState: GameState = {
       sessionId: roomCode,
       genre,
-      title: room.gameState?.title || genre,
+      title: room.title || genre,
       premise,
       storyLength: storyLength as StoryLength,
       currentScene: storyResult.scene,
@@ -72,7 +83,7 @@ export async function POST(request: NextRequest) {
     await store.updateGameState(roomCode.toUpperCase(), gameState)
 
     const updatedRoom = await store.getRoom(roomCode.toUpperCase())
-    return NextResponse.json({ room: updatedRoom })
+    return NextResponse.json({ room: updatedRoom, imageError: imageError || undefined })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('Start game error:', err)

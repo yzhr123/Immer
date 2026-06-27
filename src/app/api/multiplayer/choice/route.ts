@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStore } from '@/lib/multiplayer/store'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
-import { generateStory } from '@/lib/ai/client'
-import { GENRE_NAMES, Genre, type GameState, type LLMConfig, type ContextEntry, type Mood, type StoryLength } from '@/lib/ai/types'
+import { generateStory, generateImage } from '@/lib/ai/client'
+import { GENRE_NAMES, Genre, type GameState, type LLMConfig, type ContextEntry, type Mood, type StoryLength, type ImageMode } from '@/lib/ai/types'
 import type { SubmitChoiceRequest } from '@/lib/multiplayer/types'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SubmitChoiceRequest & { llmConfig: LLMConfig } = await request.json()
+    const body: SubmitChoiceRequest & { llmConfig: LLMConfig; imageMode?: ImageMode; imageModelId?: string } = await request.json()
 
-    const { roomCode, playerId, choiceId, llmConfig } = body
+    const { roomCode, playerId, choiceId, llmConfig, imageMode = 'full', imageModelId } = body
     if (!roomCode || !playerId || !choiceId) {
       return NextResponse.json({ error: '参数不完整' }, { status: 400 })
     }
@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
       const userPrompt = buildUserPrompt(genreName, game.premise, context, choice, game.storyLength, context.length + 1)
 
       const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)
+
+      if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
+        try {
+          storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+        } catch (imgErr: unknown) {
+          console.error('Multiplayer choice image error:', imgErr)
+        }
+      }
 
       // Build the new game state
       const now = Date.now()
