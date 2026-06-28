@@ -83,6 +83,27 @@ const dict: Record<string, Record<Lang, string>> = {
   },
   'lobby.customRecharge': { en: 'Custom', zh: '自定义' },
   'lobby.customRechargePlaceholder': { en: 'Enter amount', zh: '输入金额' },
+
+  // Story Club
+  'storyclub.title': { en: 'Story Club', zh: '故事会' },
+  'storyclub.browse': { en: 'Browse', zh: '浏览' },
+  'storyclub.share': { en: 'Share', zh: '分享' },
+  'storyclub.empty': { en: 'No stories yet. Share yours!', zh: '还没有故事，快来分享你的经历！' },
+  'storyclub.by': { en: 'by {author}', zh: '{author}' },
+  'storyclub.importBtn': { en: 'Use this story', zh: '使用这个故事' },
+  'storyclub.submitTitle': { en: 'Share Your Story', zh: '分享你的真实经历' },
+  'storyclub.formTitle': { en: 'Story Title', zh: '故事标题' },
+  'storyclub.formContent': { en: 'Your Story', zh: '你的经历' },
+  'storyclub.formAuthor': { en: 'Your Name', zh: '你的名字' },
+  'storyclub.formGenre': { en: 'Genre', zh: '题材' },
+  'storyclub.submitBtn': { en: 'Share', zh: '发布' },
+  'storyclub.submitSuccess': { en: 'Story shared!', zh: '发布成功！' },
+  'storyclub.submitFail': { en: 'Failed to share. Please try again.', zh: '发布失败，请重试。' },
+  'storyclub.triggerBtn': { en: 'Story Club', zh: '故事会' },
+  'storyclub.loadFailed': { en: 'Failed to load stories.', zh: '加载故事失败。' },
+  'storyclub.deleteBtn': { en: 'Delete', zh: '删除' },
+  'storyclub.backToList': { en: 'Back to list', zh: '返回列表' },
+  'storyclub.useBtn': { en: 'Use this story', zh: '使用这个故事' },
 }
 
 export function t(key: string, lang: Lang, params?: Record<string, string | number>): string {

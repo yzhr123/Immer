@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Genre, GENRE_NAMES } from '@/lib/ai/types'
 import { useStore } from '@/lib/store'
 import { t } from '@/lib/i18n'
@@ -17,6 +17,18 @@ export default function GenreSelector({
   const language = useStore((s) => s.language)
   const [customMode, setCustomMode] = useState(false)
   const [customValue, setCustomValue] = useState('')
+
+  // Auto-switch to custom mode when a non-preset genre is selected (Story Club import).
+  useEffect(() => {
+    if (!selected) return
+    if ((GENRES as string[]).includes(selected)) {
+      setCustomMode(false)
+      setCustomValue('')
+    } else {
+      setCustomMode(true)
+      setCustomValue(selected)
+    }
+  }, [selected])
 
   if (customMode) {
     return (

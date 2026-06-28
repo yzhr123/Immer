@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import GenreSelector from '@/components/GenreSelector'
 import SettingsDialog from '@/components/SettingsDialog'
 import ImageModeSelector from '@/components/ImageModeSelector'
+import StoryClubPanel from '@/components/StoryClubPanel'
 import { useStore } from '@/lib/store'
 import { generateId } from '@/lib/utils'
 import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
@@ -20,6 +21,7 @@ function LobbyContent() {
   const [premise, setPremise] = useState('')
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
+  const [storyClubOpen, setStoryClubOpen] = useState(false)
 
   const { userId, balance, refresh: refreshBalance } = useCredits()
   const [paymentPhase, setPaymentPhase] = useState<
@@ -176,7 +178,27 @@ function LobbyContent() {
             placeholder={t('lobby.premisePlaceholder', language)}
             className="w-full text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-2 focus:outline-none focus:border-zinc-600 transition-colors"
           />
+          {/* Story Club trigger */}
+          <div className="text-center">
+            <button
+              onClick={() => setStoryClubOpen(true)}
+              className="text-[10px] text-zinc-300 hover:text-zinc-600 transition-colors tracking-wider"
+            >
+              {t('storyclub.triggerBtn', language)} →
+            </button>
+          </div>
         </div>
+
+        {/* Story Club Panel */}
+        <StoryClubPanel
+          open={storyClubOpen}
+          onClose={() => setStoryClubOpen(false)}
+          onSelect={(premiseText, genreId) => {
+            setPremise(premiseText)
+            setGenre(genreId)
+          }}
+          language={language}
+        />
 
         {/* Cost Hint */}
         {genre && imageMode !== 'none' && (
