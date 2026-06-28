@@ -93,9 +93,25 @@ export default function SettingsDialog() {
                   type="text"
                   value={form.imageModelId || ''}
                   onChange={(e) => setForm({ ...form, imageModelId: e.target.value })}
-                  placeholder="doubao-seedream-5-0-260128"
+                  placeholder="gpt-image-2"
                   className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-md focus:outline-none focus:border-zinc-400 transition-colors bg-white text-zinc-800 placeholder-zinc-300"
                 />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {['gpt-image-2', 'doubao-seedream-4-0-250828', 'doubao-seedream-5-0-260128'].map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setForm({ ...form, imageModelId: id })}
+                      className={`px-2 py-0.5 text-[10px] tracking-wider rounded-sm transition-colors ${
+                        form.imageModelId === id
+                          ? 'bg-zinc-800 text-white'
+                          : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                      }`}
+                    >
+                      {id === 'gpt-image-2' ? '中转站' : id.replace('doubao-seedream-', '豆包 ')}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="border-t border-zinc-100 pt-4 mt-4">

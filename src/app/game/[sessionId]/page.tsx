@@ -331,6 +331,12 @@ export default function GamePage() {
       } else {
         refreshBalance()
       }
+
+      // lazy mode: generate image for the first scene after text shows
+      if (imageMode === 'lazy' && data.scene?.imagePrompt && !data.scene?.imageUrl) {
+        setImageLoading(true)
+        generateLazyImage(data.scene.imagePrompt)
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(msg)

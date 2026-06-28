@@ -1,4 +1,5 @@
 import { StoryEntry, StoryClubStore } from './store'
+import { readBlob, writeBlob } from '@/lib/blob-store'
 
 interface StoreData {
   stories: StoryEntry[]
@@ -6,6 +7,10 @@ interface StoreData {
 
 const DATA_DIR = '.data'
 const DATA_FILE = 'storyclub-store.json'
+
+/* ============================================================
+ *  File persistence helpers (local dev)
+ * ============================================================ */
 
 function getDataFilePath(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -40,9 +45,21 @@ function saveStoreData(data: StoreData): void {
   }
 }
 
+/* ============================================================
+ *  Utils
+ * ============================================================ */
+
 function generateId(): string {
   return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 15)
 }
+
+function isNetlify(): boolean {
+  return process.env.NETLIFY === 'true'
+}
+
+/* ============================================================
+ *  MemoryStoryClubStore — local file persistence
+ * ============================================================ */
 
 export class MemoryStoryClubStore implements StoryClubStore {
   private stories: StoryEntry[]
@@ -88,11 +105,66 @@ export class MemoryStoryClubStore implements StoryClubStore {
   }
 }
 
+/* ============================================================
+ *  NetlifyBlobStoryClubStore — Netlify Blob persistence
+ * ============================================================ */
+
+const BLOB_KEY = 'storyclub'
+
+export class NetlifyBlobStoryClubStore implements StoryClubStore {
+  private stories: StoryEntry[] | null = null
+
+  private async ensureLoaded(): Promise<void> {
+    if (this.stories) return
+    const data = await readBlob<StoreData>(BLOB_KEY)
+    this.stories = data?.stories ?? []
+  }
+
+  private async persist(): Promise<void> {
+    if (!this.stories) return
+    await writeBlob(BLOB_KEY, { stories: this.stories })
+  }
+
+  async list(): Promise<StoryEntry[]> {
+    await this.ensureLoaded()
+    return [...this.stories!].reverse()
+  }
+
+  async add(entry: Omit<StoryEntry, 'id' | 'createdAt'>): Promise<StoryEntry> {
+    await this.ensureLoaded()
+    const story: StoryEntry = {
+      ...entry,
+      id: generateId(),
+      createdAt: Date.now(),
+    }
+    this.stories!.push(story)
+    await this.persist()
+    return story
+  }
+
+  async remove(id: string, userId: string): Promise<boolean> {
+    await this.ensureLoaded()
+    const idx = this.stories!.findIndex((s) => s.id === id)
+    if (idx === -1) return false
+    const story = this.stories![idx]
+    if (story.userId && story.userId !== userId) return false
+    this.stories!.splice(idx, 1)
+    await this.persist()
+    return true
+  }
+}
+
+/* ============================================================
+ *  Singleton Resolver
+ * ============================================================ */
+
 let instance: StoryClubStore | null = null
 
 export function getStoryClubStore(): StoryClubStore {
   if (!instance) {
-    instance = new MemoryStoryClubStore()
+    instance = isNetlify()
+      ? new NetlifyBlobStoryClubStore()
+      : new MemoryStoryClubStore()
   }
   return instance
 }

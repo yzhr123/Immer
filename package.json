@@ -10,6 +10,7 @@
     "gen-code": "node scripts/gen-code.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.9",
     "@upstash/redis": "^1.38.0",
     "framer-motion": "^12.42.0",
     "nanoid": "^5.1.16",

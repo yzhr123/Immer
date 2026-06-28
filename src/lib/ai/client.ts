@@ -71,24 +71,45 @@ export async function generateStory(
 }
 
 export async function generateImage(prompt: string, modelId?: string): Promise<string> {
-  const baseUrl = (process.env.SEEDREAM_BASE_URL || '').replace(/\/+$/, '')
-  const apiKey = process.env.SEEDREAM_API_KEY || ''
+  // Default to relay (gpt-image-2); use Seedream only when doubao model is explicitly set
+  const useRelay = !modelId || !modelId.startsWith('doubao-seedream')
+
+  let baseUrl: string
+  let apiKey: string
+  let body: Record<string, unknown>
+
+  if (useRelay) {
+    baseUrl = (process.env.RELAY_IMAGE_BASE_URL || '').replace(/\/+$/, '')
+    apiKey = process.env.RELAY_IMAGE_API_KEY || ''
+    body = {
+      model: modelId,
+      prompt,
+      n: 1,
+      size: '16:9',
+      quality: 'high',
+      style: 'natural',
+      background: 'opaque',
+      response_format: 'url',
+    }
+  } else {
+    baseUrl = (process.env.SEEDREAM_BASE_URL || '').replace(/\/+$/, '')
+    apiKey = process.env.SEEDREAM_API_KEY || ''
+    body = {
+      model: modelId || process.env.SEEDREAM_MODEL || 'doubao-seedream-4-0-250828',
+      prompt,
+      size: '2K',
+      response_format: 'url',
+      sequential_image_generation: 'disabled',
+      stream: false,
+      watermark: false,
+    }
+  }
 
   if (!apiKey) {
-    throw new Error('SEEDREAM_API_KEY not configured')
+    throw new Error(`Image API key not configured for ${useRelay ? 'relay' : 'seedream'}`)
   }
 
   const url = `${baseUrl}/images/generations`
-
-  const body: Record<string, unknown> = {
-    model: modelId || process.env.SEEDREAM_MODEL || 'doubao-seedream-4-0-250828',
-    prompt: prompt,
-    size: '2K',
-    response_format: 'url',
-    sequential_image_generation: 'disabled',
-    stream: false,
-    watermark: false,
-  }
 
   const res = await fetch(url, {
     method: 'POST',

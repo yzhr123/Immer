@@ -78,18 +78,15 @@ export default function StoryClubPanel({
         }),
       })
       if (!res.ok) throw new Error('Submit failed')
-      setSubmitSuccess(true)
       setFormTitle('')
       setFormContent('')
       setFormAuthor('')
-      // Re-fetch stories
-      const data = await fetch('/api/storyclub').then((r) => r.json())
-      setStories(data.stories || [])
-      // Switch to browse
-      setTimeout(() => {
-        setTab('browse')
-        setSubmitSuccess(false)
-      }, 1200)
+      fetch('/api/storyclub')
+        .then((r) => r.json())
+        .then((data) => {
+          setStories(Array.isArray(data.stories) ? data.stories : [])
+        })
+      setSubmitSuccess(true)
     } catch {
       setSubmitError(true)
     } finally {
@@ -141,7 +138,7 @@ export default function StoryClubPanel({
         {/* Tabs */}
         <div className="flex border-b border-zinc-100">
           <button
-            onClick={() => setTab('browse')}
+            onClick={() => { setSubmitSuccess(false); setTab('browse') }}
             className={`flex-1 py-3 text-xs tracking-wider transition-colors ${
               tab === 'browse'
                 ? 'text-zinc-800 border-b border-zinc-800'

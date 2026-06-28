@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 export default function SceneImage({ url, alt, loading }: { url: string; alt: string; loading?: boolean }) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setLoaded(false)
+    setError(false)
+  }, [url])
 
   if (!url || error) {
     return (
