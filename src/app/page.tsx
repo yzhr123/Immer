@@ -249,6 +249,9 @@ export default function Lobby() {
 
           {paymentPhase.phase === 'show' && (
             <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center mb-3">
+              <p className="text-sm font-medium text-zinc-700 mb-3">
+                {language === 'zh' ? `需付款 ¥${paymentPhase.amount}` : `Pay ¥${paymentPhase.amount}`}
+              </p>
               <p className="text-xs text-zinc-500 mb-3">
                 {t('payment.wechatHint', language)}
               </p>
@@ -263,9 +266,15 @@ export default function Lobby() {
                   {paymentPhase.outTradeNo}
                 </p>
               </div>
-              <p className="text-[10px] text-zinc-400 mt-2">
+              <p className="text-[10px] text-zinc-400 mb-3">
                 {language === 'zh' ? '付款后联系管理员获取充值码' : 'After payment, contact admin for redeem code'}
               </p>
+              <button
+                onClick={() => setPaymentPhase({ phase: 'idle' })}
+                className="px-4 py-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+              >
+                {language === 'zh' ? '取消付款' : 'Cancel'}
+              </button>
             </div>
           )}
 

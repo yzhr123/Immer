@@ -13,13 +13,13 @@ interface ClueSidebarProps {
 }
 
 const CLUE_ICONS: Record<string, string> = {
-  letter: '📄',
+  letter: '▦',
   photo: '🖼',
-  note: '📝',
-  diary: '📖',
-  document: '📋',
-  recording: '🎵',
-  object: '🔍',
+  note: '✎',
+  diary: '🗎',
+  document: '▤',
+  recording: '♪',
+  object: '⌕',
 }
 
 export default function ClueSidebar({

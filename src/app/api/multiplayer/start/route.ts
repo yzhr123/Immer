@@ -91,6 +91,13 @@ export async function POST(request: NextRequest) {
 
     await store.updateGameState(roomCode.toUpperCase(), gameState)
 
+    await store.setHostLLMConfig(roomCode.toUpperCase(), llmConfig)
+    const savedRoom = await store.getRoom(roomCode.toUpperCase())
+    if (savedRoom) {
+      savedRoom.hostImageMode = imageMode
+      savedRoom.hostImageModelId = imageModelId
+    }
+
     const updatedRoom = await store.getRoom(roomCode.toUpperCase())
     return NextResponse.json({ room: updatedRoom, imageError: imageError || undefined })
   } catch (err: unknown) {

@@ -170,4 +170,16 @@ export class UpstashStore implements MultiplayerStore {
     room.lastActivityAt = Date.now()
     await redis.set(`${ROOM_PREFIX}${roomCode}`, JSON.stringify(room), { ex: ROOM_TTL })
   }
+
+  async setHostLLMConfig(roomCode: string, config: import('@/lib/ai/types').LLMConfig): Promise<void> {
+    const redis = getRedis()
+    await redis.set(`${ROOM_PREFIX}${roomCode}:llm`, JSON.stringify(config), { ex: ROOM_TTL })
+  }
+
+  async getHostLLMConfig(roomCode: string): Promise<import('@/lib/ai/types').LLMConfig | null> {
+    const redis = getRedis()
+    const raw = await redis.get<string>(`${ROOM_PREFIX}${roomCode}:llm`)
+    if (!raw) return null
+    return JSON.parse(raw)
+  }
 }

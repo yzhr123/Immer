@@ -13,17 +13,17 @@ export interface MPRoom {
   hostId: string
   players: MPPlayer[]
   status: RoomStatus
-  /** The current lock — which scene/choice combo is being resolved */
   lockedUntil: number | null
-  /** Id of the choice that "won" in the current round */
   resolvedChoiceId: string | null
-  /** The shared game state (same shape as single-player) */
   gameState: GameState | null
-  /** Story metadata (set at creation, used by start route) */
   genre: string
   title: string
   premise: string
   storyLength: StoryLength
+  /** Host's image mode — used for all players in the room */
+  hostImageMode?: ImageMode
+  /** Host's image model ID */
+  hostImageModelId?: string
   createdAt: number
   lastActivityAt: number
 }

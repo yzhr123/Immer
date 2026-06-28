@@ -8,7 +8,7 @@
  * To switch: set `MULTIPLAYER_STORE=upstash` and configure env vars below.
  */
 
-import type { GameState, Mood } from '@/lib/ai/types'
+import type { GameState, Mood, LLMConfig } from '@/lib/ai/types'
 import type {
   MPRoom,
   MPPlayer,
@@ -34,6 +34,11 @@ export interface MultiplayerStore {
 
   updateGameState(roomCode: string, gameState: GameState): Promise<void>
   removePlayer(roomCode: string, playerId: string): Promise<void>
+
+  /** Store the host's LLM config server-side (never sent to clients) */
+  setHostLLMConfig(roomCode: string, config: LLMConfig): Promise<void>
+  /** Retrieve the host's LLM config */
+  getHostLLMConfig(roomCode: string): Promise<LLMConfig | null>
 }
 
 /* ============================================================
@@ -42,6 +47,7 @@ export interface MultiplayerStore {
 
 interface StoreSnapshot {
   rooms: Record<string, MPRoom>
+  hostLLMConfigs: Record<string, LLMConfig>
 }
 
 const DATA_DIR = '.data'
@@ -96,9 +102,11 @@ function generateId(): string {
 
 export class MemoryStore implements MultiplayerStore {
   private rooms: Map<string, MPRoom>
+  private hostLLMConfigs: Map<string, LLMConfig>
 
   constructor() {
     this.rooms = new Map()
+    this.hostLLMConfigs = new Map()
     this.loadFromDisk()
   }
 
@@ -106,13 +114,24 @@ export class MemoryStore implements MultiplayerStore {
     const snap = loadSnapshot()
     if (!snap) return
     this.rooms = new Map(Object.entries(snap.rooms))
+    this.hostLLMConfigs = new Map(Object.entries(snap.hostLLMConfigs || {}))
   }
 
   private persist(): void {
     const data: StoreSnapshot = {
       rooms: Object.fromEntries(this.rooms),
+      hostLLMConfigs: Object.fromEntries(this.hostLLMConfigs),
     }
     saveSnapshot(data)
+  }
+
+  async setHostLLMConfig(roomCode: string, config: LLMConfig): Promise<void> {
+    this.hostLLMConfigs.set(roomCode.toUpperCase(), config)
+    this.persist()
+  }
+
+  async getHostLLMConfig(roomCode: string): Promise<LLMConfig | null> {
+    return this.hostLLMConfigs.get(roomCode.toUpperCase()) ?? null
   }
 
   async createRoom(req: CreateRoomRequest): Promise<{ roomCode: string; playerId: string; room: MPRoom }> {

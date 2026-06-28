@@ -74,7 +74,7 @@ export async function apiJoinRoom(req: JoinRoomRequest): Promise<JoinRoomRespons
 }
 
 export async function apiSubmitChoice(
-  req: SubmitChoiceRequest & { llmConfig: LLMConfig; imageMode?: ImageMode; imageModelId?: string },
+  req: SubmitChoiceRequest,
 ): Promise<SubmitChoiceResponse> {
   return apiPost<SubmitChoiceResponse>('/api/multiplayer/choice', req)
 }
@@ -281,17 +281,10 @@ export function useMultiplayer(options?: UseMultiplayerOptions): UseMultiplayerR
     setLoading(true)
     setError(null)
     try {
-      // Get LLM config from localStorage (same as single-player)
-      const llmSettings = loadLLMSettings()
-      const imagePrefs = loadImagePrefs()
-
       const result = await apiSubmitChoice({
         roomCode,
         playerId,
         choiceId,
-        llmConfig: llmSettings,
-        imageMode: imagePrefs.imageMode,
-        imageModelId: imagePrefs.imageModelId,
       })
 
       if (result.accepted && result.room) {

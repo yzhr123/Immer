@@ -2,22 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStore } from '@/lib/multiplayer/store'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
-import { GENRE_NAMES, Genre, type GameState, type LLMConfig, type ContextEntry, type Mood, type StoryLength, type ImageMode } from '@/lib/ai/types'
+import { GENRE_NAMES, Genre, type GameState, type ContextEntry, type Mood, type StoryLength } from '@/lib/ai/types'
 import type { SubmitChoiceRequest } from '@/lib/multiplayer/types'
 import { getImagePrice } from '@/lib/credit/store'
 import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SubmitChoiceRequest & { llmConfig: LLMConfig; imageMode?: ImageMode; imageModelId?: string } = await request.json()
+    const body: SubmitChoiceRequest = await request.json()
 
-    const { roomCode, playerId, choiceId, llmConfig, imageMode = 'full', imageModelId } = body
+    const { roomCode, playerId, choiceId } = body
     if (!roomCode || !playerId || !choiceId) {
       return NextResponse.json({ error: '参数不完整' }, { status: 400 })
-    }
-
-    if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
-      return NextResponse.json({ error: 'LLM 配置不完整' }, { status: 400 })
     }
 
     const store = getStore()
@@ -28,6 +24,14 @@ export async function POST(request: NextRequest) {
     if (!room.gameState) {
       return NextResponse.json({ error: '游戏未开始' }, { status: 400 })
     }
+
+    // Use the host's LLM config + image settings for all generation
+    const llmConfig = await store.getHostLLMConfig(roomCode.toUpperCase())
+    if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
+      return NextResponse.json({ error: '房主的 LLM 配置不完整' }, { status: 400 })
+    }
+    const imageMode = room.hostImageMode || 'none'
+    const imageModelId = room.hostImageModelId
 
     // Find which choice the player picked
     const choice = room.gameState.currentChoices.find((c) => c.id === choiceId)
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest) {
       if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
         const creditPrice = imageMode === 'full' ? getImagePrice('full') : getImagePrice('lazy')
         const creditStore = getCreditStore()
-        const deduct = await creditStore.deductCredits(playerId, creditPrice, `多人推进-图片生成(${imageMode})`)
+        const deduct = await creditStore.deductCredits(room.hostId, creditPrice, `多人推进-图片生成(${imageMode})`)
         if (!deduct.success) {
           console.error('Credit deduction failed (multiplayer choice):', deduct.reason)
         } else {

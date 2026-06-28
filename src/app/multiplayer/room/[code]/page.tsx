@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useMultiplayer } from '@/lib/multiplayer/client'
 import { getTheme } from '@/lib/theme'
-import type { Mood, ImageMode } from '@/lib/ai/types'
+import type { Mood } from '@/lib/ai/types'
 import SceneImage from '@/components/SceneImage'
 import NarrativeText from '@/components/NarrativeText'
 import ChoiceButton from '@/components/ChoiceButton'
@@ -35,7 +35,6 @@ export default function MultiplayerRoomPage() {
   } = useMultiplayer({ roomCode })
 
   const [bgmEnabled, setBgmEnabled] = useState(() => loadPref('immer_bgm_enabled', true))
-  const [imageMode] = useState<ImageMode>(() => loadPref('immer_image_mode', 'full'))
   const [companionEnabled, setCompanionEnabled] = useState(() => loadPref('immer_companion_enabled', true))
 
   const [hasJoined, setHasJoined] = useState(false)
@@ -73,6 +72,7 @@ export default function MultiplayerRoomPage() {
   const companionThought = gameState?.companionThought || ''
   const companionRole = gameState?.companionRole || ''
   const otherPlayersChose = room?.resolvedChoiceId !== null && !waitingForLLM
+  const imageMode = room?.hostImageMode || 'none'
 
   useEffect(() => {
     if (joinCheckedRef.current || !room) return
@@ -114,7 +114,7 @@ export default function MultiplayerRoomPage() {
         setImageLoading(false)
       }
     })()
-  }, [currentScene?.id, imageMode])
+  }, [currentScene?.id, room?.hostImageMode])
 
   useEffect(() => {
     if (!isCompleted || !typingDone || isHistoryView || endingPhase !== 'none') return

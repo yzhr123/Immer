@@ -24,10 +24,10 @@ const dict: Record<string, Record<Lang, string>> = {
 
   // Payment flow (lobby)
   'payment.wechatHint': {
-    en: 'Scan the QR code with WeChat and enter the order number in the remark',
-    zh: '微信扫码付款，备注中填写下方单号',
+    en: 'Scan the QR code with WeChat',
+    zh: '微信扫码付款',
   },
-  'payment.remarkLabel': { en: 'Remark your email/contact to get redeem code', zh: '付款备注邮箱/联系方式获取充值码' },
+  'payment.remarkLabel': { en: 'Remark your email/phone number to get redeem code', zh: '付款备注邮箱/手机号获取充值码' },
   'payment.confirmBtn': { en: 'I have paid, confirm', zh: '我已付款确认' },
   'payment.cancelBtn': { en: 'Cancel', zh: '取消' },
   'payment.submitting': { en: 'Submitting...', zh: '提交中...' },
