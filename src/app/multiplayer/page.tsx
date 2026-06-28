@@ -141,7 +141,7 @@ export default function MultiplayerLobby() {
         {/* Back */}
         <div className="w-full">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/lobby')}
             className="text-xs text-zinc-400 hover:text-zinc-800 transition-colors tracking-wider"
           >
             &lt; BACK

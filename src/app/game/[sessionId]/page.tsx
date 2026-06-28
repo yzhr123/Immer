@@ -71,7 +71,7 @@ export default function GamePage() {
         useStore.setState({ game: saved })
         return
       }
-      router.push('/')
+      router.push('/lobby')
       return
     }
 
@@ -408,7 +408,7 @@ export default function GamePage() {
   function handleRestart() {
     abortRef.current?.abort()
     clearGame()
-    router.push('/')
+    router.push('/lobby')
   }
 
   // --- history helpers ---

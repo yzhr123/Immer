@@ -1,335 +1,257 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import GenreSelector from '@/components/GenreSelector'
-import SettingsDialog from '@/components/SettingsDialog'
-import ImageModeSelector from '@/components/ImageModeSelector'
-import { useStore } from '@/lib/store'
-import { generateId } from '@/lib/utils'
-import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
-import { useCredits, redeemCode, generateOutTradeNo } from '@/lib/credit/client'
-import { CREDIT_PRICES } from '@/lib/credit/store'
-import { t, Lang } from '@/lib/i18n'
+import FluidCanvas from '@/components/FluidCanvas'
 
-export default function Lobby() {
+const GENRES = [
+  { id: 'fantasy',      label: '奇幻' },
+  { id: 'sci-fi',       label: '科幻' },
+  { id: 'mystery',      label: '悬疑' },
+  { id: 'historical',   label: '历史' },
+  { id: 'horror',       label: '恐怖' },
+  { id: 'martial-arts', label: '武侠' },
+]
+
+const B = 'cubic-bezier(0.16, 1, 0.3, 1)'
+
+export default function Portal() {
   const router = useRouter()
-  const { llmSettings, initGame, savedGames, refreshSavedGames, language, setLanguage, imageMode, setImageMode } = useStore()
-  const [genre, setGenre] = useState<string | null>(null)
-  const [premise, setPremise] = useState('')
-  const [storyLength, setStoryLength] = useState<StoryLength>('medium')
-  const [loading, setLoading] = useState(false)
-
-  const { userId, balance, refresh: refreshBalance } = useCredits()
-  const [paymentPhase, setPaymentPhase] = useState<
-    { phase: 'idle' } |
-    { phase: 'show'; outTradeNo: string; amount: number }
-  >({ phase: 'idle' })
-  const [redeemCodeInput, setRedeemCodeInput] = useState('')
-  const [redeemStatus, setRedeemStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [customAmountMode, setCustomAmountMode] = useState(false)
-  const [customAmount, setCustomAmount] = useState('')
+  const [titleHovered, setTitleHovered] = useState(false)
+  const [revealed, setRevealed] = useState(false)
+  const cardsRef = useRef<(HTMLButtonElement | null)[]>([])
+  const isTouchRef = useRef(false)
 
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') refreshBalance() }
-    document.addEventListener('visibilitychange', onVisible)
-    const balanceInterval = setInterval(refreshBalance, 30_000)
+    isTouchRef.current = 'ontouchstart' in window || window.innerWidth < 640
+  }, [])
+
+  // mirrors ui.html: .glass-card::before mouse-following radial highlight
+  useEffect(() => {
+    const cards = cardsRef.current.filter(Boolean) as HTMLButtonElement[]
+    const handler = (e: MouseEvent, card: HTMLButtonElement) => {
+      const rect = card.getBoundingClientRect()
+      card.style.setProperty('--x', `${e.clientX - rect.left}px`)
+      card.style.setProperty('--y', `${e.clientY - rect.top}px`)
+    }
+    cards.forEach((card) => {
+      card.addEventListener('mousemove', (e: MouseEvent) => handler(e, card))
+    })
     return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      clearInterval(balanceInterval)
+      cards.forEach((card) => {
+        card.removeEventListener('mousemove', (e: MouseEvent) => handler(e, card))
+      })
     }
-  }, [refreshBalance])
+  }, [revealed])
 
-  function handleStart() {
-    if (!genre) return
-    if (!llmSettings.apiUrl || !llmSettings.apiKey) {
-      alert('请在 Settings 中配置 LLM API')
-      return
-    }
+  function handleGenreClick(genreId: string) {
+    router.push(`/lobby?genre=${genreId}`)
+  }
 
-    if (imageMode === 'full' || imageMode === 'lazy') {
-      const required = CREDIT_PRICES[imageMode]
-      if (balance < required) {
-        const modeLabel = imageMode === 'full'
-          ? (language === 'zh' ? '完整' : 'Full')
-          : (language === 'zh' ? '精简' : 'Lazy')
-        alert(t('lobby.insufficientCredits', language, {
-          balance,
-          mode: modeLabel,
-          price: required,
-        }))
-        return
+  // 鼠标悬停 Immer → blur 随进随出自由切换；首次 hover 同时触发 revealed（一次 latch）
+  const handleMouseEnter = useCallback(() => {
+    setTitleHovered(true)
+    if (!revealed) setRevealed(true)
+  }, [revealed])
+
+  const handleMouseLeave = useCallback(() => {
+    setTitleHovered(false)
+  }, [])
+
+  // 点击 Immer → 仅在触屏设备上触发 reveal + 短暂 blur 作为反馈
+  const handleClick = useCallback(() => {
+    if (!revealed) {
+      setRevealed(true)
+      if (isTouchRef.current) {
+        setTitleHovered(true)
+        setTimeout(() => setTitleHovered(false), 1000)
       }
     }
+  }, [revealed])
 
-    setLoading(true)
-    const sessionId = generateId()
-
-    initGame({
-      sessionId,
-      genre,
-      title: GENRE_TITLES[genre] || genre,
-      premise,
-      storyLength,
-    })
-
-    router.push(`/game/${sessionId}`)
+  const sharedNoto = {
+    fontFamily: 'var(--font-noto-serif-sc)',
+    fontWeight: 300,
   }
-
-  function handleStartRecharge(amount: number) {
-    if (!userId) return
-    const outTradeNo = generateOutTradeNo()
-    setPaymentPhase({ phase: 'show', outTradeNo, amount })
-  }
-
-  function handleCustomRecharge() {
-    const amount = parseInt(customAmount)
-    if (!amount || amount <= 0) return
-    handleStartRecharge(amount)
-    setCustomAmount('')
-    setCustomAmountMode(false)
-  }
-
-  async function handleRedeemCode() {
-    const code = redeemCodeInput.trim()
-    if (!code || !userId) return
-    try {
-      const result = await redeemCode(userId, code)
-      setRedeemStatus({ type: 'success', message: language === 'zh' ? `充值成功，当前余额 ¥${result.balance}` : `Redeemed! Balance: ¥${result.balance}` })
-      setRedeemCodeInput('')
-      refreshBalance()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '兑换失败'
-      setRedeemStatus({ type: 'error', message: msg })
-    }
-  }
-
-  useEffect(() => {
-    if (!redeemStatus) return
-    const t = setTimeout(() => setRedeemStatus(null), 5000)
-    return () => clearTimeout(t)
-  }, [redeemStatus])
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center px-6">
-      <div className="w-full max-w-lg flex flex-col items-center py-24 gap-16">
+    <div className="flex flex-col items-center justify-center h-screen w-screen overflow-hidden select-none relative bg-white">
+      {/* 液态波纹背景 */}
+      <FluidCanvas />
 
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <h1 className="text-5xl font-light tracking-[0.15em] text-zinc-800">
-            Immer
-          </h1>
-          <p className="text-sm text-zinc-400 tracking-wider">
-            {t('lobby.subtitle', language)}
-          </p>
-        </div>
-
-        <ImageModeSelector />
-
-        {/* Genre Selection */}
-        <div className="w-full space-y-5">
-          <p className="text-center text-xs text-zinc-400 tracking-widest">
-            {t('lobby.selectGenre', language)}
-          </p>
-          <GenreSelector selected={genre} onSelect={setGenre} />
-        </div>
-
-        {/* Story Length */}
-        <div className="w-full space-y-3">
-          <p className="text-center text-xs text-zinc-400 tracking-widest">
-            {t('lobby.storyLength', language)}
-          </p>
-          <div className="flex justify-center gap-3">
-            {(['short', 'medium', 'long'] as StoryLength[]).map((len) => (
-              <button
-                key={len}
-                onClick={() => setStoryLength(len)}
-                className={`px-5 py-2 text-xs tracking-wider transition-all duration-200 rounded-sm ${
-                  storyLength === len
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 border border-zinc-200 hover:border-zinc-400'
-                }`}
-              >
-                {LENGTH_LABELS[len]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Premise Input */}
-        <div className="w-full space-y-3">
-          <p className="text-center text-xs text-zinc-400 tracking-widest">
-            {t('lobby.orPremise', language)}
-          </p>
-          <input
-            type="text"
-            value={premise}
-            onChange={(e) => setPremise(e.target.value)}
-            placeholder={t('lobby.premisePlaceholder', language)}
-            className="w-full text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-2 focus:outline-none focus:border-zinc-600 transition-colors"
-          />
-        </div>
-
-        {/* Start Button */}
-        <button
-          onClick={handleStart}
-          disabled={!genre || loading}
-          className="w-full py-3.5 text-sm tracking-widest border border-zinc-300
-            text-zinc-600 hover:text-zinc-900 hover:border-zinc-800
-            disabled:opacity-30 disabled:cursor-not-allowed
-            transition-all duration-200 rounded-none"
+      {/* === .brand-box (z-10 浮在 canvas 之上) === */}
+      <div
+        className="text-center cursor-default"
+        style={{ zIndex: 10, marginBottom: '8vh' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
+      >
+        {/* .brand-title — 模糊/字距只跟随 titleHovered */}
+        <h1
+          className="transition-all duration-800"
+          style={{
+            fontFamily: 'var(--font-plus-jakarta)',
+            fontWeight: 200,
+            fontSize: 'clamp(3.5rem, 12vw, 6rem)',
+            color: '#000000',
+            letterSpacing: titleHovered ? '2.2rem' : '1.5rem',
+            textIndent: titleHovered ? '2.2rem' : '1.5rem',
+            marginBottom: '0.8rem',
+            opacity: titleHovered ? 0.3 : 0.95,
+            filter: titleHovered ? 'blur(8px)' : 'blur(0)',
+            transitionTimingFunction: B,
+            transitionDuration: '800ms',
+            transitionProperty: 'letter-spacing, text-indent, opacity, filter',
+          }}
         >
-          {loading ? t('lobby.initializing', language) : genre ? t('lobby.begin', language) : t('lobby.selectAGenre', language)}
-        </button>
+          Immer
+        </h1>
 
-        {/* Multiplayer section */}
-        <div className="w-full pt-4 border-t border-zinc-100">
-          <p className="text-center text-xs text-zinc-300 tracking-widest mb-4">
-            {t('lobby.orPlayTogether', language)}
-          </p>
-          <button
-            onClick={() => router.push('/multiplayer')}
-            className="w-full py-3 text-sm tracking-widest border border-zinc-200
-              text-zinc-400 hover:text-zinc-800 hover:border-zinc-600
-              transition-all duration-200 rounded-none"
-          >
-            {t('lobby.multiplayer', language)}
-          </button>
-        </div>
+        {/* .brand-subtitle */}
+        <p
+          className="transition-all duration-800"
+          style={{
+            ...sharedNoto,
+            fontSize: '1rem',
+            color: '#333333',
+            letterSpacing: '0.6rem',
+            textIndent: '0.6rem',
+            opacity: titleHovered ? 0.2 : 0.5,
+            transitionTimingFunction: 'ease',
+          }}
+        >
+          AI 互动故事
+        </p>
 
-        <div className="w-full border-t border-zinc-100 pt-4">
-          <p className="text-center text-xs text-zinc-400 tracking-widest mb-3">
-            {t('lobby.credits', language)}
-          </p>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-zinc-700">¥{balance}</span>
-            <div className="flex gap-2 flex-wrap justify-end">
-              {[5, 10, 30].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => handleStartRecharge(amount)}
-                  className="px-3 py-1.5 text-xs border border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-800 rounded transition-colors"
-                >
-                  +¥{amount}
-                </button>
-              ))}
-              <button
-                onClick={() => setCustomAmountMode(!customAmountMode)}
-                className={`px-3 py-1.5 text-xs border rounded transition-colors ${
-                  customAmountMode
-                    ? 'bg-zinc-800 text-white border-zinc-800'
-                    : 'border-zinc-300 text-zinc-500 hover:text-zinc-900 hover:border-zinc-800'
-                }`}
-              >
-                {t('lobby.customRecharge', language)}
-              </button>
-            </div>
-          </div>
-
-          {customAmountMode && (
-            <div className="flex items-center gap-2 mb-3">
-              <input
-                type="number"
-                min="1"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                placeholder={t('lobby.customRechargePlaceholder', language)}
-                className="flex-1 px-3 py-1.5 text-xs border border-zinc-300 rounded focus:outline-none focus:border-zinc-500 transition-colors bg-transparent text-zinc-700 placeholder-zinc-300"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCustomRecharge() }}
-              />
-              <button
-                onClick={handleCustomRecharge}
-                disabled={!customAmount || parseInt(customAmount) <= 0}
-                className="px-3 py-1.5 text-xs border border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-800 rounded transition-colors disabled:opacity-40"
-              >
-                +¥{customAmount || '?'}
-              </button>
-            </div>
-          )}
-
-          {paymentPhase.phase === 'show' && (
-            <div className="p-4 bg-zinc-50 rounded-md border border-zinc-100 text-center mb-3">
-              <p className="text-sm font-medium text-zinc-700 mb-3">
-                {language === 'zh' ? `需付款 ¥${paymentPhase.amount}` : `Pay ¥${paymentPhase.amount}`}
-              </p>
-              <p className="text-xs text-zinc-500 mb-3">
-                {t('payment.wechatHint', language)}
-              </p>
-              <img
-                src="/wechatpay.png"
-                alt="微信收款码"
-                className="mx-auto w-44 h-44 object-contain mb-3"
-              />
-              <div className="bg-white border border-zinc-200 rounded px-3 py-2 mb-3">
-                <p className="text-[9px] text-zinc-400 tracking-wider mb-0.5">{t('payment.remarkLabel', language)}</p>
-                <p className="text-sm font-mono text-zinc-800 tracking-wider select-all">
-                  {paymentPhase.outTradeNo}
-                </p>
-              </div>
-              <p className="text-[10px] text-zinc-400 mb-3">
-                {language === 'zh' ? '付款后联系管理员获取充值码' : 'After payment, contact admin for redeem code'}
-              </p>
-              <button
-                onClick={() => setPaymentPhase({ phase: 'idle' })}
-                className="px-4 py-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-              >
-                {language === 'zh' ? '取消付款' : 'Cancel'}
-              </button>
-            </div>
-          )}
-
-          <p className="text-center text-[10px] text-zinc-400 tracking-wider mb-2">
-            {language === 'zh' ? '有充值码？输入兑换' : 'Have a redeem code?'}
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={redeemCodeInput}
-              onChange={(e) => setRedeemCodeInput(e.target.value.toUpperCase())}
-              placeholder={language === 'zh' ? '输入充值码' : 'Enter redeem code'}
-              className="flex-1 px-3 py-1.5 text-xs border border-zinc-300 rounded focus:outline-none focus:border-zinc-500 transition-colors bg-transparent text-zinc-700 placeholder-zinc-300 uppercase"
-              onKeyDown={(e) => { if (e.key === 'Enter') handleRedeemCode() }}
-              maxLength={20}
-            />
-            <button
-              onClick={handleRedeemCode}
-              disabled={!redeemCodeInput.trim()}
-              className="px-4 py-1.5 text-xs border border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:border-zinc-800 rounded transition-colors disabled:opacity-40"
-            >
-              {language === 'zh' ? '兑换' : 'Redeem'}
-            </button>
-          </div>
-
-          {redeemStatus && (
-            <p className={`text-xs mt-2 ${redeemStatus.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-              {redeemStatus.message}
-            </p>
-          )}
-        </div>
-
-        {/* Bottom Links */}
-        <div className="flex items-center gap-8 text-xs text-zinc-400">
-          <button
-            onClick={() => {
-              refreshSavedGames()
-              router.push('/games')
+        {/* 系统介绍 — revealed 后永久显示 */}
+        <div
+          className={`transition-all duration-800 ${
+            revealed
+              ? 'opacity-100 blur-none translate-y-0'
+              : 'opacity-0 blur-[6px] translate-y-3'
+          }`}
+          style={{
+            marginTop: '2.5rem',
+            marginBottom: '1rem',
+            transitionTimingFunction: B,
+            transitionProperty: 'opacity, filter, transform',
+          }}
+        >
+          <p
+            style={{
+              ...sharedNoto,
+              fontSize: '0.85rem',
+              color: '#555555',
+              letterSpacing: '0.2rem',
+              lineHeight: '2',
             }}
-            className="hover:text-zinc-800 transition-colors tracking-wider"
           >
-            {savedGames.length > 0 ? `${t('lobby.history', language)} (${savedGames.length})` : t('lobby.history', language)}
-          </button>
-          <SettingsDialog />
+            沉浸式AI剧情体验 · 每一次选择，都将重塑故事的流向
+          </p>
         </div>
       </div>
-      {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-100 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-lg mx-auto flex items-center justify-center px-6 py-2">
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-            className="text-[10px] text-zinc-300 hover:text-zinc-600 transition-colors tracking-wider"
-          >
-            {language === 'en' ? '中文' : 'En'}
-          </button>
+
+      {/* === .category-grid — revealed 后永久显示 === */}
+      <div
+        className={`transition-all duration-1000 ${
+          revealed
+            ? 'opacity-100 blur-none translate-y-0 pointer-events-auto'
+            : 'opacity-0 blur-[20px] translate-y-10 pointer-events-none'
+        }`}
+        style={{
+          width: '85%',
+          maxWidth: '1200px',
+          transitionTimingFunction: B,
+          transitionProperty: 'opacity, filter, transform',
+          zIndex: 10,
+        }}
+      >
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 sm:gap-6">
+          {GENRES.map((genre, index) => (
+            <button
+              key={genre.id}
+              ref={(el) => { cardsRef.current[index] = el }}
+              onClick={() => handleGenreClick(genre.id)}
+              style={{
+                transitionDelay: revealed ? `${index * 70}ms` : '0ms',
+                transitionTimingFunction: B,
+              }}
+              className="group relative text-center overflow-hidden cursor-pointer transition-all duration-600 hover:-translate-y-2.5 active:scale-95"
+            >
+              {/* .glass-card background + backdrop-filter — 无边框，靠背景反差感知 */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'rgba(255,255,255,0.25)',
+                  borderRadius: '20px',
+                  backdropFilter: 'blur(35px) saturate(130%)',
+                  WebkitBackdropFilter: 'blur(35px) saturate(130%)',
+                  transition: 'background-color 0.6s ease, box-shadow 0.6s ease',
+                }}
+              />
+              {/* .glass-card:hover: 自然凸显 — 无阴影，靠上移 + 聚白 + 高光 */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-600"
+                style={{
+                  background: 'rgba(255,255,255,0.45)',
+                  borderRadius: '20px',
+                }}
+              />
+              {/* .glass-card::before — mouse-following radial highlight */}
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-600 pointer-events-none"
+                style={{
+                  borderRadius: '20px',
+                  background: 'radial-gradient(100px circle at var(--x, 0px) var(--y, 0px), rgba(0,0,0,0.05), transparent 80%)',
+                  zIndex: 1,
+                }}
+              />
+
+              {/* === .card-content === */}
+              <div
+                className="relative flex flex-col items-center justify-center transition-transform duration-500 group-hover:-translate-y-2.5"
+                style={{
+                  height: '100%',
+                  padding: '2.5rem 1rem',
+                  transitionTimingFunction: B,
+                  zIndex: 2,
+                }}
+              >
+                {/* .card-name */}
+                <span
+                  className="transition-all duration-400 text-[#111111] group-hover:text-black group-hover:font-normal"
+                  style={{
+                    ...sharedNoto,
+                    fontSize: '1.15rem',
+                    letterSpacing: '0.3rem',
+                    textIndent: '0.3rem',
+                    zIndex: 2,
+                  }}
+                >
+                  {genre.label}
+                </span>
+
+                {/* .action-hint */}
+                <span
+                  className="absolute transition-all duration-500 opacity-0 translate-y-[10px] group-hover:!opacity-100 group-hover:!translate-y-0"
+                  style={{
+                    ...sharedNoto,
+                    fontWeight: 400,
+                    fontSize: '0.75rem',
+                    color: '#000000',
+                    letterSpacing: '0.1rem',
+                    marginTop: '0.8rem',
+                    bottom: '1.2rem',
+                    transitionTimingFunction: B,
+                    filter: 'blur(0)',
+                  }}
+                >
+                  进入体验 →
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

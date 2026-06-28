@@ -38,7 +38,7 @@ export default function GamesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/lobby')}
             className="text-xs text-zinc-400 hover:text-zinc-800 transition-colors tracking-wider"
           >
             BACK
@@ -54,7 +54,7 @@ export default function GamesPage() {
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <p className="text-sm text-zinc-400 tracking-wider">NO SAVED GAMES</p>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/lobby')}
               className="text-xs text-zinc-300 hover:text-zinc-600 border-b border-zinc-200 pb-0.5 transition-colors"
             >
               START A NEW STORY
