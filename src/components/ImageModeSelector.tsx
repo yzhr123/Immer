@@ -1,14 +1,43 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import type { ImageMode } from '@/lib/ai/types'
 import { t } from '@/lib/i18n'
 
 export default function ImageModeSelector() {
   const { imageMode, setImageMode, language } = useStore()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  if (!mounted) {
+    return (
+      <div className="w-full border-t border-zinc-100 pt-4">
+        <p className="text-center text-xs text-zinc-400 tracking-widest mb-3">
+          {t('settings.imageMode', 'zh')}
+        </p>
+        <div className="flex justify-center gap-4">
+          {(['full', 'lazy', 'none'] as ImageMode[]).map((mode) => (
+            <label
+              key={mode}
+              className="flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-xs tracking-wider transition-colors bg-zinc-50 text-zinc-500"
+            >
+              <input type="radio" name="imageMode" value={mode} checked={false} readOnly className="sr-only" />
+              <span className="flex flex-col items-center gap-0.5">
+                <span>{mode === 'full' ? t('settings.full', 'zh') : mode === 'lazy' ? t('settings.lazy', 'zh') : t('settings.none', 'zh')}</span>
+                <span className="text-[10px] text-zinc-400">
+                  {mode === 'full' ? t('settings.priceFull', 'zh') : mode === 'lazy' ? t('settings.priceLazy', 'zh') : t('settings.priceNone', 'zh')}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div suppressHydrationWarning className="w-full border-t border-zinc-100 pt-4">
+    <div className="w-full border-t border-zinc-100 pt-4">
       <p className="text-center text-xs text-zinc-400 tracking-widest mb-3">
         {t('settings.imageMode', language)}
       </p>
@@ -26,7 +55,7 @@ export default function ImageModeSelector() {
               type="radio"
               name="imageMode"
               value={mode}
-              defaultChecked={imageMode === mode}
+              checked={imageMode === mode}
               onChange={() => setImageMode(mode)}
               className="sr-only"
             />

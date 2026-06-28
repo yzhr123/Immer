@@ -51,19 +51,23 @@ export async function POST(request: NextRequest) {
     const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)
 
     let imageError = ''
-    if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
+
+    // 开局按模式一次性扣费（不计图片有无）
+    if (imageMode !== 'none') {
       const creditPrice = imageMode === 'full' ? getImagePrice('full') : getImagePrice('lazy')
       const creditStore = getCreditStore()
-      const deduct = await creditStore.deductCredits(playerId, creditPrice, `多人开局-图片生成(${imageMode})`)
+      const deduct = await creditStore.deductCredits(playerId, creditPrice, `多人-${imageMode === 'full' ? '完整模式' : '精简模式'}体验`)
       if (!deduct.success) {
         imageError = deduct.reason || '余额不足'
-      } else {
-        try {
-          storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
-        } catch (imgErr: unknown) {
-          imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
-          console.error('Multiplayer start image error:', imageError)
-        }
+      }
+    }
+
+    if (!imageError && imageMode !== 'none' && storyResult.scene.imagePrompt) {
+      try {
+        storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+      } catch (imgErr: unknown) {
+        imageError = imgErr instanceof Error ? imgErr.message : 'Image generation failed'
+        console.error('Multiplayer start image error:', imageError)
       }
     }
 
@@ -99,7 +103,13 @@ export async function POST(request: NextRequest) {
     }
 
     const updatedRoom = await store.getRoom(roomCode.toUpperCase())
-    return NextResponse.json({ room: updatedRoom, imageError: imageError || undefined })
+
+    let newBalance: number | undefined
+    if (imageMode !== 'none' && playerId) {
+      newBalance = await getCreditStore().getBalance(playerId)
+    }
+
+    return NextResponse.json({ room: updatedRoom, imageError: imageError || undefined, newBalance })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('Start game error:', err)

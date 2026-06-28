@@ -53,8 +53,8 @@ const dict: Record<string, Record<Lang, string>> = {
   'settings.full': { en: 'Full', zh: '完整' },
   'settings.lazy': { en: 'Lazy', zh: '精简' },
   'settings.none': { en: 'None', zh: '关闭' },
-  'settings.priceFull': { en: '\u00a510/times', zh: '\u00a510/\u6b21' },
-  'settings.priceLazy': { en: '\u00a55/times', zh: '\u00a55/\u6b21' },
+  'settings.priceFull': { en: '\u00a510/session', zh: '\u00a510/\u5c40' },
+  'settings.priceLazy': { en: '\u00a55/session', zh: '\u00a55/\u5c40' },
   'settings.priceNone': { en: 'Free', zh: '免费' },
   'settings.credits': { en: 'Credits', zh: '信用分' },
   'settings.balance': { en: 'Balance: \u00a5{balance}', zh: '余额: \u00a5{balance}' },
@@ -74,8 +74,8 @@ const dict: Record<string, Record<Lang, string>> = {
   'genre.customPlaceholder': { en: 'Enter a custom genre...', zh: '输入自定义类型...' },
 
   'lobby.insufficientCredits': {
-    en: 'Insufficient balance! Current: ¥{balance}. {mode} mode costs ¥{price} per image. Please recharge first.',
-    zh: '余额不足！当前 ¥{balance}，{mode} 模式每次 ¥{price}。请先充值。',
+    en: 'Insufficient balance! Current: ¥{balance}. {mode} mode costs ¥{price} per session. Please recharge first.',
+    zh: '余额不足！当前 ¥{balance}，{mode} 模式每局 ¥{price}。请先充值。',
   },
   'lobby.customRecharge': { en: 'Custom', zh: '自定义' },
   'lobby.customRechargePlaceholder': { en: 'Enter amount', zh: '输入金额' },

@@ -191,5 +191,9 @@ export function useCredits() {
     setBalance(result.balance)
   }, [userId])
 
-  return { userId, balance, loading, recharge, refresh }
+  const setUserBalance = useCallback((newBalance: number) => {
+    setBalance(newBalance)
+  }, [])
+
+  return { userId, balance, loading, recharge, refresh, setBalance: setUserBalance }
 }

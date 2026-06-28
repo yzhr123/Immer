@@ -54,7 +54,7 @@ export default function GamePage() {
   const preGenRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  const { balance } = useCredits()
+  const { balance, refresh: refreshBalance, setBalance } = useCredits()
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -232,6 +232,7 @@ export default function GamePage() {
           generateImage: imageMode === 'full',
           storyLength: game.storyLength,
           userId: getUserId(),
+          imageMode,
         }),
         signal,
       })
@@ -305,6 +306,7 @@ export default function GamePage() {
           generateImage: imageMode === 'full',
           storyLength: game.storyLength,
           userId: getUserId(),
+          imageMode,
         }),
       })
       if (!res.ok) {
@@ -324,6 +326,11 @@ export default function GamePage() {
       if (data.companion_thought) setCompanionState(data.companion_thought, data.companion_role || '')
       if (data.imageError && imageMode !== 'none') setImageError(data.imageError)
       else setImageError('')
+      if (data.newBalance !== undefined) {
+        setBalance(data.newBalance)
+      } else {
+        refreshBalance()
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(msg)

@@ -4,8 +4,6 @@ import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
 import { GENRE_NAMES, Genre, type GameState, type ContextEntry, type Mood, type StoryLength } from '@/lib/ai/types'
 import type { SubmitChoiceRequest } from '@/lib/multiplayer/types'
-import { getImagePrice } from '@/lib/credit/store'
-import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,17 +58,10 @@ export async function POST(request: NextRequest) {
       const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)
 
       if (imageMode !== 'none' && storyResult.scene.imagePrompt) {
-        const creditPrice = imageMode === 'full' ? getImagePrice('full') : getImagePrice('lazy')
-        const creditStore = getCreditStore()
-        const deduct = await creditStore.deductCredits(room.hostId, creditPrice, `多人推进-图片生成(${imageMode})`)
-        if (!deduct.success) {
-          console.error('Credit deduction failed (multiplayer choice):', deduct.reason)
-        } else {
-          try {
-            storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
-          } catch (imgErr: unknown) {
-            console.error('Multiplayer choice image error:', imgErr)
-          }
+        try {
+          storyResult.scene.imageUrl = await generateImage(storyResult.scene.imagePrompt, imageModelId)
+        } catch (imgErr: unknown) {
+          console.error('Multiplayer choice image error:', imgErr)
         }
       }
 
