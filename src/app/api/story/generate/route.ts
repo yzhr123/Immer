@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
 import { GENRE_NAMES, Genre, ContextEntry, ImageMode } from '@/lib/ai/types'
-import { getImagePrice } from '@/lib/credit/store'
+import { getSessionPrice } from '@/lib/credit/store'
 import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const isFirstScene = context.length === 0 && !choice
     if (userId && isFirstScene && (imageMode === 'full' || imageMode === 'lazy')) {
       const creditStore = getCreditStore()
-      const price = getImagePrice(imageMode)
+      const price = getSessionPrice(imageMode, storyLength || 'medium')
       const deduct = await creditStore.deductCredits(
         userId,
         price,

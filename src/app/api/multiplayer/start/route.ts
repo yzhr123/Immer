@@ -3,7 +3,7 @@ import { getStore } from '@/lib/multiplayer/store'
 import { buildSystemPrompt, buildUserPrompt } from '@/lib/ai/prompts'
 import { generateStory, generateImage } from '@/lib/ai/client'
 import { GENRE_NAMES, Genre, type LLMConfig, type GameState, type StoryLength, type Mood, type ImageMode } from '@/lib/ai/types'
-import { getImagePrice } from '@/lib/credit/store'
+import { getSessionPrice } from '@/lib/credit/store'
 import { getCreditStore } from '@/lib/credit/store-server'
 
 export async function POST(request: NextRequest) {
@@ -52,9 +52,8 @@ export async function POST(request: NextRequest) {
 
     let imageError = ''
 
-    // 开局按模式一次性扣费（不计图片有无）
     if (imageMode !== 'none') {
-      const creditPrice = imageMode === 'full' ? getImagePrice('full') : getImagePrice('lazy')
+      const creditPrice = getSessionPrice(imageMode, storyLength)
       const creditStore = getCreditStore()
       const deduct = await creditStore.deductCredits(playerId, creditPrice, `多人-${imageMode === 'full' ? '完整模式' : '精简模式'}体验`)
       if (!deduct.success) {

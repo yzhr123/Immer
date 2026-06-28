@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const USER_ID_KEY = 'immer_user_id'
 
@@ -168,16 +168,22 @@ export function useCredits() {
   const userId = getUserId()
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
+  const versionRef = useRef(0)
 
   const refresh = useCallback(async () => {
     if (!userId) return
+    const myVersion = ++versionRef.current
     try {
       const data = await fetchBalance(userId)
-      setBalance(data.balance)
+      if (versionRef.current === myVersion) {
+        setBalance(data.balance)
+      }
     } catch {
       // Silently fail — credit system is optional
     } finally {
-      setLoading(false)
+      if (versionRef.current === myVersion) {
+        setLoading(false)
+      }
     }
   }, [userId])
 
@@ -192,6 +198,7 @@ export function useCredits() {
   }, [userId])
 
   const setUserBalance = useCallback((newBalance: number) => {
+    versionRef.current++
     setBalance(newBalance)
   }, [])
 

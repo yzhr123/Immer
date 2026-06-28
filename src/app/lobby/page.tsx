@@ -9,7 +9,7 @@ import { useStore } from '@/lib/store'
 import { generateId } from '@/lib/utils'
 import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
 import { useCredits, redeemCode, generateOutTradeNo } from '@/lib/credit/client'
-import { CREDIT_PRICES } from '@/lib/credit/store'
+import { getSessionPrice, LENGTH_MULTIPLIERS } from '@/lib/credit/store'
 import { t, Lang } from '@/lib/i18n'
 
 function LobbyContent() {
@@ -55,7 +55,7 @@ function LobbyContent() {
     }
 
     if (imageMode === 'full' || imageMode === 'lazy') {
-      const required = CREDIT_PRICES[imageMode]
+      const required = getSessionPrice(imageMode, storyLength)
       if (balance < required) {
         const modeLabel = imageMode === 'full'
           ? (language === 'zh' ? '完整' : 'Full')
@@ -158,6 +158,7 @@ function LobbyContent() {
                 }`}
               >
                 {LENGTH_LABELS[len]}
+                <span className="ml-1 opacity-60">×{LENGTH_MULTIPLIERS[len]}</span>
               </button>
             ))}
           </div>
@@ -176,6 +177,18 @@ function LobbyContent() {
             className="w-full text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-2 focus:outline-none focus:border-zinc-600 transition-colors"
           />
         </div>
+
+        {/* Cost Hint */}
+        {genre && imageMode !== 'none' && (
+          <div className="text-center">
+            <span className="text-xs text-zinc-400 tracking-wider">
+              {t('lobby.sessionCost', language, { total: getSessionPrice(imageMode, storyLength) })}
+            </span>
+            <span className="text-[10px] text-zinc-300 ml-2">
+              {t(imageMode === 'full' ? 'settings.full' : 'settings.lazy', language)} ×{LENGTH_MULTIPLIERS[storyLength]}
+            </span>
+          </div>
+        )}
 
         {/* Start Button */}
         <button

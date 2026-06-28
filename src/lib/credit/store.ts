@@ -16,6 +16,18 @@ export function getImagePrice(tier: ImageTier): number {
   return CREDIT_PRICES[tier]
 }
 
+/** Story length → price multiplier */
+export const LENGTH_MULTIPLIERS: Record<string, number> = {
+  short: 1,
+  medium: 2,
+  long: 3,
+}
+
+/** Calculate the actual session price = base price × length multiplier */
+export function getSessionPrice(tier: ImageTier, length: string): number {
+  return CREDIT_PRICES[tier] * (LENGTH_MULTIPLIERS[length] || 1)
+}
+
 export interface CreditStore {
   getBalance(userId: string): Promise<number>
 

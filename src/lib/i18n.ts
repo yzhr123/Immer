@@ -77,6 +77,10 @@ const dict: Record<string, Record<Lang, string>> = {
     en: 'Insufficient balance! Current: ¥{balance}. {mode} mode costs ¥{price} per session. Please recharge first.',
     zh: '余额不足！当前 ¥{balance}，{mode} 模式每局 ¥{price}。请先充值。',
   },
+  'lobby.sessionCost': {
+    en: 'This session: ¥{total}',
+    zh: '本局费用：¥{total}',
+  },
   'lobby.customRecharge': { en: 'Custom', zh: '自定义' },
   'lobby.customRechargePlaceholder': { en: 'Enter amount', zh: '输入金额' },
 }
