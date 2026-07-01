@@ -177,17 +177,9 @@ export default function BetaGamePage() {
   }, [betaPhase, prologueData])
 
   function handlePrologueDone() {
-    if (prologueData?.characterOptions && prologueData.characterOptions.length > 1) {
-      // Multiple characters → show selection after prologue
+    // Always go to character selection, even if only 1 option
+    if (prologueData) {
       setBetaPhase('choosing-character')
-    } else {
-      // Single character → apply identity and start game
-      if (prologueData) {
-        setCharacterIdentity(prologueData.characterIdentity, prologueData.characterBackground)
-      }
-      setPrologueData(null)
-      setBetaPhase('playing')
-      generateFirstScene()
     }
   }
 
@@ -569,28 +561,37 @@ export default function BetaGamePage() {
   const totalBranches = Object.keys(branches).length
   const display = getDisplayScene()
 
-  // ---- Character Select screen (inline, no hooks issue) ----
-  if (betaPhase === 'choosing-character' && prologueData?.characterOptions && prologueData.characterOptions.length > 1) {
+  // ---- Character Select screen (black bg, white border, light text) ----
+  if (betaPhase === 'choosing-character' && prologueData) {
+    const options = prologueData.characterOptions && prologueData.characterOptions.length > 0
+      ? prologueData.characterOptions
+      : prologueData.characterIdentity
+        ? [{ id: 'default', identity: prologueData.characterIdentity, background: prologueData.characterBackground }]
+        : []
+
     return (
-      <div className="flex flex-col flex-1 items-center justify-center min-h-screen" style={{ backgroundColor: theme.bg }}>
-        <div className="flex flex-col items-center w-full max-w-lg mx-auto px-6 py-12 gap-8">
-          <p className="text-xs tracking-widest" style={{ color: theme.textMuted }}>
-            {useStore.getState().language === 'zh' ? '选择你的角色' : 'Choose Your Character'}
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
+        <div className="max-w-lg w-full px-8 py-12">
+          <p className="text-xs tracking-widest mb-10 text-center text-white/40">
+            {language === 'zh' ? '选择你的角色' : 'Choose Your Character'}
           </p>
-          <div className="flex flex-col gap-4 w-full">
-            {prologueData.characterOptions.map((char) => (
+          <div className="flex flex-col gap-4">
+            {options.map((char) => (
               <button
                 key={char.id}
                 onClick={() => handleCharacterSelect(char)}
-                className="w-full text-left p-5 transition-all duration-300 hover:-translate-y-1"
-                style={{
-                  backgroundColor: theme.bgCard,
-                  border: `1px solid ${theme.border}`,
-                  color: theme.text,
-                }}
+                className="group w-full text-left transition-all duration-400 hover:-translate-y-1 active:scale-[0.98]"
               >
-                <p className="text-base tracking-wide mb-2 font-medium">{char.identity}</p>
-                <p className="text-sm opacity-70 leading-relaxed">{char.background}</p>
+                <div className="relative overflow-hidden rounded-sm border border-white/20 bg-black/40">
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
+                    style={{ background: 'rgba(255,255,255,0.06)' }}
+                  />
+                  <div className="relative px-6 py-5">
+                    <p className="text-base tracking-wide mb-2 font-medium text-zinc-300">{char.identity}</p>
+                    <p className="text-sm text-white/40 leading-relaxed">{char.background}</p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>
@@ -804,22 +805,6 @@ export default function BetaGamePage() {
               {prologueRevealed}
               {!prologueTypingDone && <span className="animate-pulse text-white/50">▌</span>}
             </div>
-
-            {/* show role identity after prologue typing completes */}
-            {prologueTypingDone && (() => {
-              const showChar = prologueData.characterIdentity || (
-                prologueData.characterOptions && prologueData.characterOptions.length > 0
-                  ? prologueData.characterOptions.map(c => c.identity).join(' / ')
-                  : ''
-              )
-              if (!showChar) return null
-              return (
-                <div className="mt-10 animate-fade-in-up">
-                  <p className="text-xs tracking-widest mb-3 text-white/40">你将成为</p>
-                  <p className="text-lg tracking-wide text-white/90">{showChar}</p>
-                </div>
-              )
-            })()}
 
             {prologueTypingDone && (
               <p className="text-xs text-white/40 tracking-wider mt-8 animate-fade-in-up">点击继续</p>

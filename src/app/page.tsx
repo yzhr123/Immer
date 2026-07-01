@@ -253,6 +253,65 @@ export default function Portal() {
             </button>
           ))}
         </div>
+
+        {/* === Immersive Learning Lab Entry — below genre grid === */}
+        <div
+          className="transition-all duration-1000 mt-12 flex justify-center"
+          style={{
+            transitionTimingFunction: B,
+            transitionProperty: 'opacity, filter, transform',
+          }}
+        >
+          <button
+            onClick={() => router.push('/learn')}
+            className="group relative cursor-pointer overflow-hidden transition-all duration-600 hover:-translate-y-1.5 active:scale-95"
+            style={{
+              borderRadius: '999px',
+              padding: '1rem 3rem',
+            }}
+          >
+            {/* Default: light glass background */}
+            <div
+              className="absolute inset-0 transition-all duration-600"
+              style={{
+                background: 'rgba(255,255,255,0.50)',
+                borderRadius: '999px',
+                backdropFilter: 'blur(35px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(35px) saturate(160%)',
+                border: '1px solid rgba(0,0,0,0.08)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+              }}
+            />
+            {/* Hover: dark solid inversion */}
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-600"
+              style={{
+                background: '#18181b',
+                borderRadius: '999px',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.20)',
+              }}
+            />
+
+            {/* Content — text swaps on hover */}
+            <div className="relative flex items-center justify-center">
+              {/* Default text */}
+              <span
+                className="transition-opacity duration-600 group-hover:opacity-0"
+                style={{ ...sharedNoto, fontSize: '0.95rem', letterSpacing: '0.18rem', color: '#1a1a1a' }}
+              >
+                沉浸式学习空间
+              </span>
+              {/* Hover text (white, replaces) */}
+              <span
+                className="absolute inset-0 flex items-center justify-center transition-opacity duration-600 opacity-0 group-hover:opacity-100"
+                style={{ ...sharedNoto, fontSize: '0.95rem', letterSpacing: '0.18rem', color: '#ffffff' }}
+              >
+                进入学习空间
+              </span>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   )

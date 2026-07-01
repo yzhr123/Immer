@@ -89,7 +89,7 @@ async function handlePrologue(
     prologue: parsed.prologue || `故事开始于一个${genre}的世界。${premise}`,
     characterIdentity: identity,
     characterBackground: background,
-    characterOptions: options && options.length > 1 ? options : undefined,
+    characterOptions: options && options.length > 0 ? options : undefined,
   } satisfies PrologueResponse)
 }
 
