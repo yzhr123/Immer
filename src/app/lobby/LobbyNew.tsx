@@ -18,7 +18,7 @@ type Step = 1 | 2 | 3 | 4
 const STEPS: { id: Step; labelZh: string; labelEn: string }[] = [
   { id: 1, labelZh: '题材', labelEn: 'Genre' },
   { id: 2, labelZh: '故事', labelEn: 'Story' },
-  { id: 3, labelZh: '配置', labelEn: 'Config' },
+  { id: 3, labelZh: '前提', labelEn: 'Premise' },
   { id: 4, labelZh: '出发', labelEn: 'Begin' },
 ]
 
@@ -72,6 +72,7 @@ function LobbyNewContent() {
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
   const [storyClubOpen, setStoryClubOpen] = useState(false)
+  const [refreshed, setRefreshed] = useState(false)
 
   const { userId, balance, refresh: refreshBalance } = useCredits()
   const [paymentPhase, setPaymentPhase] = useState<
@@ -290,8 +291,10 @@ function LobbyNewContent() {
 
           {/* ─── Header ─── */}
           <div className="text-center space-y-2 pt-10">
-            <h1 className="text-5xl font-light tracking-[0.15em]"
+            <h1
+              className="text-5xl font-light tracking-[0.15em] cursor-pointer hover:opacity-60 transition-opacity duration-300"
               style={{ color: '#1c1c1e', fontFamily: "'Noto Serif SC', 'Georgia', serif" }}
+              onClick={() => router.push('/')}
             >
               Immer
             </h1>
@@ -550,9 +553,20 @@ function LobbyNewContent() {
           </p>
 
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm tracking-wider" style={{ color: '#1c1c1e', fontWeight: 500 }}>
-              ¥{balance}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm tracking-wider" style={{ color: '#1c1c1e', fontWeight: 500 }}>
+                ¥{balance}
+              </span>
+              <button
+                onClick={() => { refreshBalance(); setRefreshed(true); setTimeout(() => setRefreshed(false), 1500) }}
+                className="opacity-60 hover:opacity-90 transition-opacity duration-300 text-xs"
+                style={{ color: '#8e8e93' }}
+              >↻</button>
+              <span
+                className={`text-[10px] transition-opacity duration-300 ${refreshed ? 'opacity-60' : 'opacity-0 pointer-events-none'}`}
+                style={{ color: '#8e8e93' }}
+              >已刷新</span>
+            </div>
             <div className="flex gap-2 flex-wrap justify-end">
               {[5, 10, 30].map((amount) => (
                 <button

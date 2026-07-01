@@ -45,6 +45,7 @@ export default function GamePage() {
   const [branches, setBranches] = useState<Record<string, BranchState>>({})
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
+  const [refreshed, setRefreshed] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [endingPhase, setEndingPhase] = useState<'none' | 'fade' | 'typing' | 'end'>('none')
   const [revealedText, setRevealedText] = useState('')
@@ -545,8 +546,19 @@ export default function GamePage() {
               >
                 AI:{companionEnabled ? 'ON' : 'OFF'}
               </button>
-              <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>
-                ¥{balance}
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>
+                  ¥{balance}
+                </span>
+                <button
+                  onClick={() => { refreshBalance(); setRefreshed(true); setTimeout(() => setRefreshed(false), 1500) }}
+                  className="opacity-60 hover:opacity-90 transition-opacity duration-300 text-xs"
+                  style={{ color: theme.textMuted }}
+                >↻</button>
+                <span
+                  className={`text-[10px] transition-opacity duration-300 ${refreshed ? 'opacity-60' : 'opacity-0 pointer-events-none'}`}
+                  style={{ color: theme.textMuted }}
+                >已刷新</span>
               </span>
             </div>
 

@@ -59,7 +59,8 @@ export default function MultiplayerRoomPage() {
 
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
-  const { balance } = useCredits()
+  const [refreshed, setRefreshed] = useState(false)
+  const { balance, refresh } = useCredits()
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -295,7 +296,18 @@ export default function MultiplayerRoomPage() {
                 style={{ color: bgmEnabled ? theme.textSecondary : theme.textMuted }}>BGM:{bgmEnabled ? 'ON' : 'OFF'}</button>
               <button onClick={() => setCompanionEnabled(!companionEnabled)} className="transition-colors duration-300 tracking-wider"
                 style={{ color: companionEnabled ? theme.textSecondary : theme.textMuted }}>AI:{companionEnabled ? 'ON' : 'OFF'}</button>
-              <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>¥{balance}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-xs tracking-wider" style={{ color: theme.textMuted }}>¥{balance}</span>
+                <button
+                  onClick={() => { refresh(); setRefreshed(true); setTimeout(() => setRefreshed(false), 1500) }}
+                  className="opacity-60 hover:opacity-90 transition-opacity duration-300 text-xs"
+                  style={{ color: theme.textMuted }}
+                >↻</button>
+                <span
+                  className={`text-[10px] transition-opacity duration-300 ${refreshed ? 'opacity-60' : 'opacity-0 pointer-events-none'}`}
+                  style={{ color: theme.textMuted }}
+                >已刷新</span>
+              </span>
             </div>
 
             {isHistoryView ? (

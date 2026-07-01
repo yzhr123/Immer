@@ -48,6 +48,7 @@ export default function BetaGamePage() {
   const [error, setError] = useState('')
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
+  const [refreshed, setRefreshed] = useState(false)
 
   // Ending (same as original)
   const [endingPhase, setEndingPhase] = useState<'none' | 'fade' | 'typing' | 'end'>('none')
@@ -662,7 +663,18 @@ export default function BetaGamePage() {
                 className="hover:opacity-70 transition-opacity tracking-wider"
                 style={{ color: companionEnabled ? theme.textSecondary : theme.textMuted }}
               >AI:{companionEnabled ? 'ON' : 'OFF'}</button>
-              <span>¥{balance}</span>
+              <span className="flex items-center gap-1.5">
+                <span>¥{balance}</span>
+                <button
+                  onClick={() => { refreshBalance(); setRefreshed(true); setTimeout(() => setRefreshed(false), 1500) }}
+                  className="opacity-60 hover:opacity-90 transition-opacity duration-300 text-xs"
+                  style={{ color: theme.textMuted }}
+                >↻</button>
+                <span
+                  className={`text-[10px] transition-opacity duration-300 ${refreshed ? 'opacity-60' : 'opacity-0 pointer-events-none'}`}
+                  style={{ color: theme.textMuted }}
+                >已刷新</span>
+              </span>
             </div>
 
             <button

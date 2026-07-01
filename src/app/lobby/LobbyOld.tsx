@@ -22,6 +22,7 @@ function LobbyContent() {
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
   const [storyClubOpen, setStoryClubOpen] = useState(false)
+  const [refreshed, setRefreshed] = useState(false)
 
   const { userId, balance, refresh: refreshBalance } = useCredits()
   const [paymentPhase, setPaymentPhase] = useState<
@@ -350,7 +351,17 @@ function LobbyContent() {
             {t('lobby.credits', language)}
           </p>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-zinc-700">¥{balance}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-700">¥{balance}</span>
+              <button
+                onClick={() => { refreshBalance(); setRefreshed(true); setTimeout(() => setRefreshed(false), 1500) }}
+                className="opacity-60 hover:opacity-90 transition-opacity duration-300 text-xs text-zinc-400"
+              >↻</button>
+              <span
+                className={`text-[10px] transition-opacity duration-300 ${refreshed ? 'opacity-60' : 'opacity-0 pointer-events-none'}`}
+                style={{ color: '#a1a1aa' }}
+              >已刷新</span>
+            </div>
             <div className="flex gap-2 flex-wrap justify-end">
               {[5, 10, 30].map((amount) => (
                 <button
