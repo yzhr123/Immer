@@ -10,7 +10,16 @@ export async function GET() {
     return NextResponse.json({ stories })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const isBlobError =
+      message.includes('Netlify Blob') || message.includes('MissingBlobsEnvironmentError')
+    return NextResponse.json(
+      {
+        error: isBlobError
+          ? '存储服务未配置：请在 Netlify 后台启用 Blob 存储（Site Settings → Functions → Netlify Blobs）'
+          : message,
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -31,7 +40,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ story: entry }, { status: 201 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const isBlobError =
+      message.includes('Netlify Blob') || message.includes('writeBlob failed')
+    return NextResponse.json(
+      {
+        error: isBlobError
+          ? '保存失败：Netlify Blob 存储未正确配置，请在 Netlify 后台启用 Blob 存储'
+          : message,
+      },
+      { status: 500 },
+    )
   }
 }
 

@@ -128,6 +128,14 @@ export class NetlifyBlobStoryClubStore implements StoryClubStore {
       await Promise.all(keys.map((key) => readBlob<StoryEntry>(key)))
     ).filter((s): s is StoryEntry => s !== null)
 
+    if (stories.length !== keys.length) {
+      console.warn(
+        '[NetlifyBlobStoryClubStore] list(): %d of %d blobs could not be parsed.',
+        keys.length - stories.length,
+        keys.length,
+      )
+    }
+
     return stories.sort((a, b) => b.createdAt - a.createdAt)
   }
 
@@ -137,16 +145,35 @@ export class NetlifyBlobStoryClubStore implements StoryClubStore {
       id: generateId(),
       createdAt: Date.now(),
     }
-    await writeBlob(storyKey(story.id), story)
+    const ok = await writeBlob(storyKey(story.id), story)
+    if (!ok) {
+      throw new Error(
+        `NetlifyBlobStoryClubStore.add(): writeBlob failed for story "${story.id}". ` +
+          'Check Netlify function logs for details.',
+      )
+    }
     return story
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
     const key = storyKey(id)
     const story = await readBlob<StoryEntry>(key)
-    if (!story) return false
+    if (!story) {
+      console.warn(
+        '[NetlifyBlobStoryClubStore] remove(): story "%s" not found or could not be read.',
+        id,
+      )
+      return false
+    }
     if (story.userId && story.userId !== userId) return false
-    await deleteBlob(key)
+    const ok = await deleteBlob(key)
+    if (!ok) {
+      console.warn(
+        '[NetlifyBlobStoryClubStore] remove(): deleteBlob returned false for key "%s".',
+        key,
+      )
+      return false
+    }
     return true
   }
 }
