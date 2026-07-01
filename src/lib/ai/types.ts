@@ -146,6 +146,15 @@ export const GENRE_NAMES: Record<Genre, string> = {
   'martial-arts': '武侠',
 }
 
+export const GENRE_NAMES_EN: Record<Genre, string> = {
+  fantasy: 'Fantasy',
+  'sci-fi': 'Sci-Fi',
+  mystery: 'Mystery',
+  historical: 'Historical',
+  horror: 'Horror',
+  'martial-arts': 'Wuxia',
+}
+
 export const GENRE_TITLES: Record<string, string> = {
   fantasy: '奇幻之旅',
   'sci-fi': '星际迷航',
@@ -169,4 +178,10 @@ export const LENGTH_LABELS: Record<StoryLength, string> = {
   short: '短篇',
   medium: '中篇',
   long: '长篇',
+}
+
+export const LENGTH_LABELS_EN: Record<StoryLength, string> = {
+  short: 'Short',
+  medium: 'Medium',
+  long: 'Long',
 }

@@ -13,14 +13,14 @@ import type { PrologueResponse, BetaSceneResponse } from '@/lib/ai/experimental/
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { phase, genre, premise, llmConfig } = body
+    const { phase, genre, premise, llmConfig, language } = body
 
     if (!llmConfig?.apiUrl || !llmConfig?.model || !llmConfig?.apiKey) {
       return NextResponse.json({ error: 'LLM 配置不完整' }, { status: 400 })
     }
 
     if (phase === 'prologue') {
-      return handlePrologue(genre, premise, llmConfig)
+      return handlePrologue(genre, premise, llmConfig, language)
     }
 
     if (phase === 'scene') {
@@ -39,8 +39,9 @@ async function handlePrologue(
   genre: string,
   premise: string,
   llmConfig: { apiUrl: string; model: string; apiKey: string },
+  language: string = 'zh',
 ) {
-  const systemPrompt = buildBetaProloguePrompt(genre, premise)
+  const systemPrompt = buildBetaProloguePrompt(genre, premise, language as 'zh' | 'en')
   const userPrompt = `故事类型：${genre}\n故事初始设定：${premise}\n\n请生成开场引子（只描述起始场景，不要展开剧情）和可选的扮演角色。`
 
   // Call LLM directly — DO NOT use generateStory() because its parseStoryResponse
@@ -131,6 +132,7 @@ async function handleScene(body: any) {
     sceneIndex,
     context,
     choice,
+    language,
   } = body
 
   const systemPrompt = buildBetaSystemPrompt(
@@ -139,6 +141,7 @@ async function handleScene(body: any) {
     characterBackground || '',
     storyPhase || 'beginning',
     sceneIndex || 1,
+    language || 'zh',
   )
 
   const userPrompt = buildBetaUserPrompt(

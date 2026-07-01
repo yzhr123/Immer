@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
       llmConfig: LLMConfig
       imageMode?: ImageMode
       imageModelId?: string
+      language?: string
     } = await request.json()
 
     const { roomCode, playerId, llmConfig, imageMode = 'full', imageModelId } = body
@@ -43,9 +44,10 @@ export async function POST(request: NextRequest) {
     const genre = room.genre || 'mystery'
     const premise = room.premise || ''
     const storyLength = room.storyLength || 'medium'
+    const language = (body.language || 'zh') as 'zh' | 'en'
     const genreName = GENRE_NAMES[genre as Genre] || genre
 
-    const systemPrompt = buildSystemPrompt(genreName, storyLength)
+    const systemPrompt = buildSystemPrompt(genreName, storyLength, language)
     const userPrompt = buildUserPrompt(genreName, premise, [])
 
     const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)

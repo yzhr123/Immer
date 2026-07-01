@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const language = (body.language || 'zh') as 'zh' | 'en'
     const genreName = GENRE_NAMES[genre as Genre] || genre
-    const systemPrompt = buildSystemPrompt(genreName, storyLength)
+    const systemPrompt = buildSystemPrompt(genreName, storyLength, language)
     const sceneCount = context.length + (choice ? 1 : 0)
     const userPrompt = buildUserPrompt(genreName, premise, context, choice, storyLength, sceneCount)
 

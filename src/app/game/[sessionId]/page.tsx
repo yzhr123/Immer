@@ -33,6 +33,7 @@ export default function GamePage() {
     setCompanionState,
     companionEnabled,
     setCompanionEnabled,
+    language,
   } = useStore()
 
   const sessionId = params?.sessionId as string
@@ -233,6 +234,7 @@ export default function GamePage() {
           storyLength: game.storyLength,
           userId: getUserId(),
           imageMode,
+          language,
         }),
         signal,
       })
@@ -307,6 +309,7 @@ export default function GamePage() {
           storyLength: game.storyLength,
           userId: getUserId(),
           imageMode,
+          language,
         }),
       })
       if (!res.ok) {

@@ -15,7 +15,7 @@ export default function LobbyPage() {
     <div className="flex flex-col flex-1">
       {/* Tab Switcher */}
       <div
-        className="fixed top-0 left-0 right-0 z-50 flex justify-center"
+        className="fixed top-0 left-0 right-0 z-50 flex justify-start"
         style={{
           background: tab === 'new'
             ? 'linear-gradient(180deg, #faf8f5 0%, rgba(250,248,245,0) 100%)'

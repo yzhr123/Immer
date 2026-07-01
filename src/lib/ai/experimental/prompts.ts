@@ -11,7 +11,10 @@
 export function buildBetaProloguePrompt(
   genre: string,
   premise: string,
+  language: 'zh' | 'en' = 'zh',
 ): string {
+  const narrativeLang = language === 'en' ? 'English' : '中文'
+
   return `你是一位沉浸式互动叙事大师。你正在创作一个${genre}类型的故事。
 
 ## 任务
@@ -19,7 +22,7 @@ export function buildBetaProloguePrompt(
 
 ## 序章要求
 序章是故事的**开场引子**，不是完整故事预览。必须严格遵守：
-- 2-3 段中文叙事，每段 2-3 句
+- 2-3 段${narrativeLang}叙事，每段 2-3 句
 - 只建立**最初的场景**——主角当下的处境和周围的氛围
 - 暗示即将发生的事，但**不要讲述后续发展**
 - 故事的所有冲突和转折留到后续游戏中展开
@@ -33,7 +36,7 @@ export function buildBetaProloguePrompt(
 
 ## 输出必须是严格的 JSON 格式：
 {
-  "prologue": "序章正文，2-3段中文，只描述起始场景和氛围",
+  "prologue": "序章正文，2-3段${narrativeLang}，只描述起始场景和氛围",
   "characterIdentity": "默认角色身份（如只有1个角色选项时使用）",
   "characterBackground": "默认角色背景（一句话）",
   "characterOptions": [
@@ -66,8 +69,10 @@ export function buildBetaSystemPrompt(
   characterBackground: string,
   storyPhase: 'beginning' | 'development' | 'climax' | 'ending',
   sceneIndex: number,
+  language: 'zh' | 'en' = 'zh',
 ): string {
   const phaseGuide = PHASE_GUIDES[storyPhase] || PHASE_GUIDES.beginning
+  const narrativeLang = language === 'en' ? 'English' : '中文'
 
   return `你是一位沉浸式互动叙事大师。你正在创作一个${genre}类型的故事。
 
@@ -105,7 +110,7 @@ choices 数组的长度可以灵活变化，不要固定为 3 个：
 
 ## 输出格式（严格 JSON，不包含其他文字）
 {
-  "narrative": "故事正文，2-4 段中文，每段 1-3 句，描写细腻有画面感",
+  "narrative": "故事正文，2-4 段${narrativeLang}，每段 1-3 句，描写细腻有画面感",
   "choices": [
     { "id": "a", "text": "选择一", "type": "choice", "allowCustom": false },
     { "id": "b", "text": "选择二", "type": "choice", "allowCustom": false }
@@ -129,7 +134,7 @@ choices 数组的长度可以灵活变化，不要固定为 3 个：
 
 --- 关键词与结局标题（仅在 is_ending = true 时必须输出） ---
 - keywords: 包含 10-20 个核心关键词
-- ending_title: 一个富有诗意的标题（3-8 字中文）
+- ending_title: ${language === 'en' ? 'A poetic title (3-8 words in English)' : '一个富有诗意的标题（3-8 字中文）'}
 
 --- 伴侣生成 ---
 - companion_role 根据故事类型和角色身份自动选择

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import GenreSelector from '@/components/GenreSelector'
 import SettingsDialog from '@/components/SettingsDialog'
@@ -8,7 +8,7 @@ import ImageModeSelector from '@/components/ImageModeSelector'
 import StoryClubPanel from '@/components/StoryClubPanel'
 import { useStore } from '@/lib/store'
 import { generateId } from '@/lib/utils'
-import { GENRE_TITLES, StoryLength, LENGTH_LABELS } from '@/lib/ai/types'
+import { GENRE_TITLES, StoryLength, LENGTH_LABELS, LENGTH_LABELS_EN } from '@/lib/ai/types'
 import { useCredits, redeemCode, generateOutTradeNo } from '@/lib/credit/client'
 import { getSessionPrice, LENGTH_MULTIPLIERS } from '@/lib/credit/store'
 import { t, Lang } from '@/lib/i18n'
@@ -191,54 +191,114 @@ function LobbyNewContent() {
     return () => clearTimeout(t)
   }, [redeemStatus])
 
+  /* ────────────── scroll to step 2 on genre select ────────────── */
+  const storySectionRef = useRef<HTMLDivElement>(null)
+  const prevGenreRef = useRef(genre)
+  useEffect(() => {
+    if (!prevGenreRef.current && genre && storySectionRef.current) {
+      storySectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    prevGenreRef.current = genre
+  }, [genre])
+
+  /* ────────────── story length glass pill ────────────── */
+  const lenContainerRef = useRef<HTMLDivElement>(null)
+  const lenItemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [lenPill, setLenPill] = useState({ left: 0, width: 0, top: 0, height: 0 })
+  useEffect(() => {
+    if (!lenContainerRef.current) return
+    const lens: StoryLength[] = ['short', 'medium', 'long']
+    const idx = lens.indexOf(storyLength)
+    if (idx === -1) return
+    const el = lenItemRefs.current[idx]
+    const parent = lenContainerRef.current
+    if (!el) return
+    const pr = parent.getBoundingClientRect()
+    const er = el.getBoundingClientRect()
+    setLenPill({
+      left: er.left - pr.left,
+      width: er.width,
+      top: er.top - pr.top,
+      height: er.height,
+    })
+  }, [storyLength])
+
   return (
-    <div className="flex flex-col flex-1 items-center px-6"
-      style={{ background: '#faf8f5', minHeight: '100vh' }}
-    >
-      <div className="w-full max-w-lg flex flex-col items-center py-20 gap-10">
+    <div style={{ background: '#faf8f5', minHeight: '100vh' }}>
 
-        {/* ─── Header ─── */}
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-light tracking-[0.15em]"
-            style={{ color: '#1c1c1e', fontFamily: "'Noto Serif SC', 'Georgia', serif" }}
-          >
-            Immer
-          </h1>
-          <p className="text-xs tracking-[0.25em]" style={{ color: '#8e8e93' }}>
-            AI 互动故事
-          </p>
-        </div>
-
-        {/* ─── Step Progress ─── */}
-        <div className="w-full flex items-center justify-center gap-1">
+      {/* ─── Vertical Step Nav (fixed left) ─── */}
+      <div
+        className="fixed left-0 top-0 bottom-0 z-30 flex items-center justify-center"
+        style={{ width: '72px' }}
+      >
+        <div className="flex flex-col items-center gap-0">
           {STEPS.map((s, idx) => {
             const done = step > s.id
             const active = step === s.id
             return (
-              <div key={s.id} className="flex items-center gap-1">
-                <span
-                  className={`
-                    text-[10px] tracking-[0.2em] font-medium transition-all duration-300
-                    ${done ? 'opacity-40' : ''}
-                    ${active ? 'opacity-90' : ''}
-                    ${!done && !active ? 'opacity-20' : ''}
-                  `}
-                  style={{ color: '#1c1c1e' }}
-                >
-                  {language === 'zh' ? s.labelZh : s.labelEn}
-                </span>
-                {idx < STEPS.length - 1 && (
+              <div key={s.id} className="flex flex-col items-center">
+                {/* Circle + label row */}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div
+                    className="flex items-center justify-center rounded-full transition-all duration-500"
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      background: active || done ? 'rgba(28,28,30,0.75)' : 'transparent',
+                      border: active || done ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                    }}
+                  >
+                    <span
+                      className="text-[10px] font-medium transition-all duration-500"
+                      style={{
+                        color: active || done ? '#ffffff' : '#aeaeb2',
+                      }}
+                    >
+                      {s.id}
+                    </span>
+                  </div>
                   <span
-                    className={`inline-block w-6 h-px mx-1 transition-all duration-300 ${
-                      done ? 'opacity-30' : 'opacity-10'
-                    }`}
-                    style={{ background: '#1c1c1e' }}
+                    className="text-[8px] tracking-[0.15em] transition-all duration-300"
+                    style={{
+                      color: active ? '#1c1c1e' : done ? '#aeaeb2' : '#d4d4d4',
+                      fontWeight: active ? 600 : 400,
+                    }}
+                  >
+                    {language === 'zh' ? s.labelZh : s.labelEn}
+                  </span>
+                </div>
+                {/* Connector */}
+                {idx < STEPS.length - 1 && (
+                  <div
+                    className="w-px my-2 transition-all duration-300"
+                    style={{
+                      height: '16px',
+                      background: done ? 'rgba(28,28,30,0.75)' : 'rgba(0,0,0,0.04)',
+                      opacity: done ? 0.12 : 1,
+                    }}
                   />
                 )}
               </div>
             )
           })}
         </div>
+      </div>
+
+      {/* ─── Content ─── */}
+      <div className="flex flex-col flex-1 items-center px-6 pb-24" style={{ marginLeft: '72px' }}>
+        <div className="w-full max-w-lg flex flex-col items-center gap-10">
+
+          {/* ─── Header ─── */}
+          <div className="text-center space-y-2 pt-10">
+            <h1 className="text-5xl font-light tracking-[0.15em]"
+              style={{ color: '#1c1c1e', fontFamily: "'Noto Serif SC', 'Georgia', serif" }}
+            >
+              Immer
+            </h1>
+            <p className="text-xs tracking-[0.25em]" style={{ color: '#8e8e93' }}>
+              AI 互动故事
+            </p>
+          </div>
 
         {/* ─── Step 1: Genre ─── */}
         <GlassCard accent>
@@ -256,6 +316,7 @@ function LobbyNewContent() {
         </GlassCard>
 
         {/* ─── Step 2: Story ─── */}
+        <div ref={storySectionRef} className="w-full">
         <GlassCard accent>
           <div className="flex items-center gap-3 mb-5">
             <span className="text-[10px] font-medium tracking-[0.15em] uppercase"
@@ -265,29 +326,41 @@ function LobbyNewContent() {
             <span className="h-px flex-1" style={{ background: 'rgba(0,0,0,0.04)' }} />
           </div>
 
-          {/* Story Length */}
+          {/* Story Length — liquid glass sliding pill */}
           <p className="text-[11px] tracking-[0.2em] mb-3" style={{ color: '#8e8e93' }}>
             {t('lobby.storyLength', language)}
           </p>
-          <div className="flex gap-2 mb-6">
-            {(['short', 'medium', 'long'] as StoryLength[]).map((len) => (
+          <div className="flex gap-2 mb-6 relative" ref={lenContainerRef}>
+            {/* sliding pill */}
+            <div
+              className="absolute rounded-[12px] pointer-events-none transition-all duration-500 ease-out"
+              style={{
+                left: lenPill.left,
+                width: lenPill.width,
+                top: lenPill.top,
+                height: lenPill.height,
+                background: 'rgba(28,28,30,0.75)',
+                backdropFilter: 'blur(16px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(16px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.04)',
+              }}
+            />
+            {(['short', 'medium', 'long'] as StoryLength[]).map((len, idx) => (
               <button
                 key={len}
+                ref={(el) => { lenItemRefs.current[idx] = el }}
                 onClick={() => setStoryLength(len)}
                 className={`
-                  flex-1 py-2.5 text-[11px] tracking-[0.15em] transition-all duration-300
-                  ${storyLength === len
-                    ? 'text-white'
-                    : 'opacity-50 hover:opacity-80'
-                  }
+                  flex-1 py-2.5 text-[11px] tracking-[0.15em] transition-all duration-300 z-10
+                  ${storyLength === len ? 'text-white' : 'opacity-50 hover:opacity-80'}
                 `}
                 style={{
-                  borderRadius: '12px',
-                  background: storyLength === len ? '#1c1c1e' : 'rgba(0,0,0,0.02)',
-                  border: storyLength === len ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                  background: 'transparent',
+                  border: 'none',
                 }}
               >
-                {LENGTH_LABELS[len]}
+                {language === 'en' ? LENGTH_LABELS_EN[len] : LENGTH_LABELS[len]}
                 <span className="ml-1 opacity-50">×{LENGTH_MULTIPLIERS[len]}</span>
               </button>
             ))}
@@ -349,6 +422,8 @@ function LobbyNewContent() {
           }}
           language={language}
         />
+
+        </div>
 
         {/* ─── Step 3: Config ─── */}
         <GlassCard accent>
@@ -418,28 +493,26 @@ function LobbyNewContent() {
             <button
               onClick={handleBetaStart}
               disabled={!genre || loading}
-              className="px-5 py-3.5 text-sm tracking-[0.15em] transition-all duration-300"
+              className="group relative px-5 py-3.5 text-sm tracking-widest overflow-hidden transition-all duration-200"
               style={{
-                borderRadius: '14px',
-                background: 'rgba(167,139,250,0.06)',
                 color: '#a78bfa',
-                border: '1px solid rgba(167,139,250,0.15)',
+                border: '1px solid #a78bfa',
+                borderRadius: '14px',
                 cursor: !genre || loading ? 'not-allowed' : 'pointer',
-                opacity: !genre || loading ? 0.4 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (genre && !loading) {
-                  e.currentTarget.style.background = 'rgba(167,139,250,0.1)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (genre && !loading) {
-                  e.currentTarget.style.background = 'rgba(167,139,250,0.06)'
-                }
+                opacity: !genre || loading ? 0.3 : 1,
               }}
             >
-              <span className="text-[10px] font-semibold tracking-[0.15em]">BETA</span>
-              <span className="ml-1.5 text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+              <span className="relative z-10 flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold tracking-[0.15em]">BETA</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs">
+                  {language === 'zh' ? '新体验' : 'New'}
+                </span>
+                <span className="inline-block transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+              </span>
+              <span
+                className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                style={{ backgroundColor: '#a78bfa' }}
+              />
             </button>
           </div>
 
@@ -664,11 +737,13 @@ function LobbyNewContent() {
           <SettingsDialog />
         </div>
       </div>
+    </div>
 
       {/* ─── Bottom Bar ─── */}
       <div
-        className="fixed bottom-0 left-0 right-0"
+        className="fixed bottom-0 right-0"
         style={{
+          left: '72px',
           borderTop: '1px solid rgba(0,0,0,0.04)',
           background: 'rgba(250,248,245,0.8)',
           backdropFilter: 'blur(12px)',

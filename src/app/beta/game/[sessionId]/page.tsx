@@ -38,6 +38,7 @@ export default function BetaGamePage() {
     setCompanionState,
     setCharacterIdentity,
     setStoryPhase,
+    language,
   } = useStore()
 
   const { balance, refresh: refreshBalance, setBalance } = useCredits()
@@ -124,6 +125,7 @@ export default function BetaGamePage() {
           genre: currentGame.genre,
           premise: currentGame.premise,
           llmConfig: llmSettings,
+          language,
         }),
       })
       if (!res.ok) {
@@ -208,6 +210,7 @@ export default function BetaGamePage() {
           storyPhase: 'beginning',
           sceneIndex: 1,
           context: [],
+          language,
         }),
       })
       if (!res.ok) {
@@ -308,6 +311,7 @@ export default function BetaGamePage() {
           characterBackground: g.characterBackground || '',
           storyPhase: g.storyPhase || 'development',
           sceneIndex,
+          language,
         }),
         signal,
       })
@@ -469,6 +473,7 @@ export default function BetaGamePage() {
           characterBackground: g.characterBackground || '',
           storyPhase: g.storyPhase || 'development',
           sceneIndex,
+          language,
         }),
       })
       if (!res.ok) throw new Error('Generation failed')

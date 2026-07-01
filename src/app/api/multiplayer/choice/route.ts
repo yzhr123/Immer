@@ -50,9 +50,10 @@ export async function POST(request: NextRequest) {
     try {
       const game = room.gameState
       const context = buildContext(game)
+      const language = (body.language || 'zh') as 'zh' | 'en'
       const genreName = GENRE_NAMES[game.genre as Genre] || game.genre
 
-      const systemPrompt = buildSystemPrompt(genreName, game.storyLength)
+      const systemPrompt = buildSystemPrompt(genreName, game.storyLength, language)
       const userPrompt = buildUserPrompt(genreName, game.premise, context, choice, game.storyLength, context.length + 1)
 
       const storyResult = await generateStory(systemPrompt, userPrompt, llmConfig)

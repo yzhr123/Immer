@@ -56,6 +56,7 @@ export interface SubmitChoiceRequest {
   roomCode: string
   playerId: string
   choiceId: string
+  language?: string
 }
 
 export interface SubmitChoiceResponse {

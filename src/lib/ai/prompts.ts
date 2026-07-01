@@ -1,9 +1,11 @@
-export function buildSystemPrompt(genre: string, storyLength: string = 'medium'): string {
+export function buildSystemPrompt(genre: string, storyLength: string = 'medium', language: 'zh' | 'en' = 'zh'): string {
   const lengthGuides: Record<string, string> = {
     short: '这是一个短篇故事，目标在 3-5 个场景内完成。节奏紧凑，快速推向高潮和结局。',
     medium: '这是一个中篇故事，目标在 15-25 个场景内完成。充分铺陈，有完整的起承转合和角色弧。',
     long: '这是一个长篇故事，不做场景数限制。力求故事完备，情节不重复、逻辑自洽，按故事需要自然收束。',
   }
+
+  const narrativeLang = language === 'en' ? 'English' : '中文'
 
   return `你是一位沉浸式互动叙事大师。你正在创作一个${genre}类型的故事。
 
@@ -14,7 +16,7 @@ ${lengthGuides[storyLength] || lengthGuides.medium}
 输出必须是严格的 JSON 格式，不要包含任何其他文字：
 
 {
-  "narrative": "故事正文，2-4 段中文，每段 1-3 句，描写细腻有画面感，营造沉浸氛围",
+  "narrative": "故事正文，2-4 段${narrativeLang}，每段 1-3 句，描写细腻有画面感，营造沉浸氛围",
   "choices": [
     { "id": "a", "text": "选项文字，简洁有力，10字以内" },
     { "id": "b", "text": "选项文字，简洁有力，10字以内" },
@@ -40,7 +42,7 @@ ${lengthGuides[storyLength] || lengthGuides.medium}
 
 --- 关键词与结局标题（仅在 is_ending = true 时必须输出） ---
 - keywords: 包含 10-20 个整篇故事中出现过的核心关键词/短语，如人名、地点、重要物品、关键事件等
-- ending_title: 一个富有诗意和意味的标题（3-8 字中文），概括整个故事的灵魂，比如"长夜余火"、"深海回响"
+- ending_title: ${language === 'en' ? 'A poetic and meaningful title (3-8 words in English), capturing the soul of the story' : '一个富有诗意和意味的标题（3-8 字中文），概括整个故事的灵魂，比如"长夜余火"、"深海回响"'}
 
 --- 伴侣生成规则 ---
 - companion_role 根据故事类型自动选择合适身份（如：悬疑→"直觉"；恐怖→"求生本能"；奇幻→"远古回响"；科幻→"AI助手"；历史→"史官之音"；武侠→"江湖密探"）

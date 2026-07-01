@@ -9,8 +9,8 @@ const dict: Record<string, Record<Lang, string>> = {
   'lobby.storyLength': { en: 'STORY LENGTH', zh: '故事长度' },
   'lobby.orPremise': { en: 'OR ENTER A PREMISE', zh: '或输入故事前提' },
   'lobby.premisePlaceholder': {
-    en: 'A lone detective in a city that never sleeps...',
-    zh: '一个在不眠都市中的孤独侦探...',
+    en: 'Custom input or choose from Story Club',
+    zh: '自定义输入或从故事会中选取',
   },
   'lobby.begin': { en: 'BEGIN', zh: '开始' },
   'lobby.selectAGenre': { en: 'SELECT A GENRE', zh: '选择一个题材' },
