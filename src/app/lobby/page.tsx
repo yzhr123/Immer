@@ -85,6 +85,34 @@ function LobbyContent() {
     router.push(`/game/${sessionId}`)
   }
 
+  function handleBetaStart() {
+    if (!genre) return
+    if (!llmSettings.apiUrl || !llmSettings.apiKey) {
+      alert('请在 Settings 中配置 LLM API')
+      return
+    }
+    if (imageMode === 'full' || imageMode === 'lazy') {
+      alert(language === 'zh'
+        ? 'Beta 测试版暂不支持图片模式，请将图片模式切换为「关闭」后再试。'
+        : 'Image mode is not supported in Beta. Please switch to "None" mode first.')
+      return
+    }
+
+    setLoading(true)
+    const sessionId = generateId()
+
+    initGame({
+      sessionId,
+      genre,
+      title: GENRE_TITLES[genre] || genre,
+      premise,
+      storyLength,
+      isBeta: true,
+    })
+
+    router.push(`/beta/game/${sessionId}`)
+  }
+
   function handleStartRecharge(amount: number) {
     if (!userId) return
     const outTradeNo = generateOutTradeNo()
@@ -178,16 +206,70 @@ function LobbyContent() {
             placeholder={t('lobby.premisePlaceholder', language)}
             className="w-full text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-2 focus:outline-none focus:border-zinc-600 transition-colors"
           />
-          {/* Story Club trigger */}
-          <div className="text-center">
-            <button
-              onClick={() => setStoryClubOpen(true)}
-              className="text-[10px] text-zinc-300 hover:text-zinc-600 transition-colors tracking-wider"
-            >
-              {t('storyclub.triggerBtn', language)} →
-            </button>
-          </div>
         </div>
+
+        {/* Story Club — premium entry */}
+        <button
+          onClick={() => setStoryClubOpen(true)}
+          className="group relative w-full text-left overflow-hidden transition-all duration-500"
+          style={{
+            padding: '1.2rem 1.5rem',
+            borderRadius: '16px',
+            background: 'rgba(255,255,255,0.6)',
+            backdropFilter: 'blur(20px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+            border: '1px solid rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px rgba(0,0,0,0.01)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.06)'
+            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px rgba(0,0,0,0.01)'
+            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.04)'
+          }}
+        >
+          {/* left accent bar */}
+          <span
+            className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-all duration-500 group-hover:opacity-100"
+            style={{
+              background: 'linear-gradient(to bottom, #d4d4d4, #a3a3a3)',
+              opacity: 0.5,
+            }}
+          />
+          {/* hover glow overlay */}
+          <span
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{
+              borderRadius: '16px',
+              background: 'radial-gradient(280px circle at 30% 50%, rgba(0,0,0,0.02), transparent 70%)',
+            }}
+          />
+          {/* content */}
+          <div className="relative flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-0.5">
+              <span
+                className="text-sm font-medium tracking-wider transition-colors duration-300"
+                style={{ color: '#27272a', letterSpacing: '0.15em' }}
+              >
+                {t('storyclub.triggerBtn', language)}
+              </span>
+              <span
+                className="text-[11px] tracking-wider transition-colors duration-300"
+                style={{ color: '#a1a1aa' }}
+              >
+                {language === 'zh' ? '浏览社区故事 · 一键续写你的篇章' : 'Browse community stories · Continue where you left'}
+              </span>
+            </div>
+            <span
+              className="text-sm transition-all duration-300 group-hover:translate-x-0.5"
+              style={{ color: '#a1a1aa' }}
+            >
+              →
+            </span>
+          </div>
+        </button>
 
         {/* Story Club Panel */}
         <StoryClubPanel
@@ -212,17 +294,41 @@ function LobbyContent() {
           </div>
         )}
 
-        {/* Start Button */}
-        <button
-          onClick={handleStart}
-          disabled={!genre || loading}
-          className="w-full py-3.5 text-sm tracking-widest border border-zinc-300
-            text-zinc-600 hover:text-zinc-900 hover:border-zinc-800
-            disabled:opacity-30 disabled:cursor-not-allowed
-            transition-all duration-200 rounded-none"
-        >
-          {loading ? t('lobby.initializing', language) : genre ? t('lobby.begin', language) : t('lobby.selectAGenre', language)}
-        </button>
+        {/* Start + Beta Buttons */}
+        <div className="w-full flex gap-3 items-stretch">
+          <button
+            onClick={handleStart}
+            disabled={!genre || loading}
+            className="flex-1 py-3.5 text-sm tracking-widest border border-zinc-300
+              text-zinc-600 hover:text-zinc-900 hover:border-zinc-800
+              disabled:opacity-30 disabled:cursor-not-allowed
+              transition-all duration-200 rounded-none"
+          >
+            {loading ? t('lobby.initializing', language) : genre ? t('lobby.begin', language) : t('lobby.selectAGenre', language)}
+          </button>
+          <button
+            onClick={handleBetaStart}
+            disabled={!genre || loading}
+            className="group relative px-5 py-3.5 text-sm tracking-widest overflow-hidden
+              transition-all duration-200 rounded-none"
+            style={{
+              color: '#a78bfa',
+              border: '1px solid #a78bfa',
+            }}
+          >
+            <span className="relative z-10 flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold tracking-[0.15em]">BETA</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs">
+                新体验
+              </span>
+              <span className="inline-block transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+            </span>
+            <span
+              className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+              style={{ backgroundColor: '#a78bfa' }}
+            />
+          </button>
+        </div>
 
         {/* Multiplayer section */}
         <div className="w-full pt-4 border-t border-zinc-100">

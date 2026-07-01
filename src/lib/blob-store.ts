@@ -52,3 +52,14 @@ export async function deleteBlob(key: string): Promise<boolean> {
     return false
   }
 }
+
+export async function listBlobs(prefix: string): Promise<string[]> {
+  const store = getBlobStore()
+  if (!store) return []
+  try {
+    const { blobs } = await store.list({ prefix })
+    return blobs.map((b) => b.key)
+  } catch {
+    return []
+  }
+}

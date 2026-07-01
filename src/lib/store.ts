@@ -67,6 +67,7 @@ interface AppStore {
     title: string
     premise: string
     storyLength: StoryLength
+    isBeta?: boolean
   }) => void
 
   setCurrentScene: (
@@ -96,6 +97,8 @@ interface AppStore {
   deleteGame: (sessionId: string) => void
   refreshSavedGames: () => void
   clearGame: () => void
+  setCharacterIdentity: (identity: string, background: string) => void
+  setStoryPhase: (phase: 'beginning' | 'development' | 'climax' | 'ending') => void
 }
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -157,6 +160,7 @@ export const useStore = create<AppStore>((set, get) => ({
       endingText: null,
       startedAt: now,
       lastPlayedAt: now,
+      isBeta: params.isBeta,
     }
     set({ game })
   },
@@ -280,5 +284,28 @@ export const useStore = create<AppStore>((set, get) => ({
 
   clearGame: () => {
     set({ game: null })
+  },
+
+  setCharacterIdentity: (identity, background) => {
+    const { game } = get()
+    if (!game) return
+    set({
+      game: {
+        ...game,
+        characterIdentity: identity,
+        characterBackground: background,
+      },
+    })
+  },
+
+  setStoryPhase: (phase) => {
+    const { game } = get()
+    if (!game) return
+    set({
+      game: {
+        ...game,
+        storyPhase: phase,
+      },
+    })
   },
 }))

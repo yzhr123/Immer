@@ -99,6 +99,11 @@ export interface GameState {
   companionRole: string
   endingTitle: string
   status: 'playing' | 'generating' | 'completed'
+  // Beta 版附加字段
+  isBeta?: boolean
+  characterIdentity?: string
+  characterBackground?: string
+  storyPhase?: 'beginning' | 'development' | 'climax' | 'ending'
   endingText: string | null
   startedAt: number
   lastPlayedAt: number

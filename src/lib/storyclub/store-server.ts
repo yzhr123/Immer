@@ -1,5 +1,5 @@
 import { StoryEntry, StoryClubStore } from './store'
-import { readBlob, writeBlob } from '@/lib/blob-store'
+import { readBlob, writeBlob, deleteBlob, listBlobs } from '@/lib/blob-store'
 
 interface StoreData {
   stories: StoryEntry[]
@@ -107,49 +107,46 @@ export class MemoryStoryClubStore implements StoryClubStore {
 
 /* ============================================================
  *  NetlifyBlobStoryClubStore — Netlify Blob persistence
+ *
+ *  Each story stored under its own key:  storyclub:{id}
+ *  No read-modify-write cycle → no race condition between
+ *  concurrent serverless function instances.
  * ============================================================ */
 
-const BLOB_KEY = 'storyclub'
+const BLOB_PREFIX = 'storyclub:'
+
+function storyKey(id: string): string {
+  return `${BLOB_PREFIX}${id}`
+}
 
 export class NetlifyBlobStoryClubStore implements StoryClubStore {
-  private stories: StoryEntry[] | null = null
-
-  private async ensureLoaded(): Promise<void> {
-    if (this.stories) return
-    const data = await readBlob<StoreData>(BLOB_KEY)
-    this.stories = data?.stories ?? []
-  }
-
-  private async persist(): Promise<void> {
-    if (!this.stories) return
-    await writeBlob(BLOB_KEY, { stories: this.stories })
-  }
-
   async list(): Promise<StoryEntry[]> {
-    await this.ensureLoaded()
-    return [...this.stories!].reverse()
+    const keys = await listBlobs(BLOB_PREFIX)
+    if (keys.length === 0) return []
+
+    const stories: StoryEntry[] = (
+      await Promise.all(keys.map((key) => readBlob<StoryEntry>(key)))
+    ).filter((s): s is StoryEntry => s !== null)
+
+    return stories.sort((a, b) => b.createdAt - a.createdAt)
   }
 
   async add(entry: Omit<StoryEntry, 'id' | 'createdAt'>): Promise<StoryEntry> {
-    await this.ensureLoaded()
     const story: StoryEntry = {
       ...entry,
       id: generateId(),
       createdAt: Date.now(),
     }
-    this.stories!.push(story)
-    await this.persist()
+    await writeBlob(storyKey(story.id), story)
     return story
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
-    await this.ensureLoaded()
-    const idx = this.stories!.findIndex((s) => s.id === id)
-    if (idx === -1) return false
-    const story = this.stories![idx]
+    const key = storyKey(id)
+    const story = await readBlob<StoryEntry>(key)
+    if (!story) return false
     if (story.userId && story.userId !== userId) return false
-    this.stories!.splice(idx, 1)
-    await this.persist()
+    await deleteBlob(key)
     return true
   }
 }
