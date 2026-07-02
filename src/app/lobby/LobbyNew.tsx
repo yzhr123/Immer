@@ -70,6 +70,7 @@ function LobbyNewContent() {
   const [genre, setGenre] = useState<string | null>(null)
   const [premise, setPremise] = useState('')
   const [generatingPremise, setGeneratingPremise] = useState(false)
+const [showFullPremise, setShowFullPremise] = useState(false)
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
   const [storyClubOpen, setStoryClubOpen] = useState(false)
@@ -393,32 +394,49 @@ function LobbyNewContent() {
           <p className="text-[11px] tracking-[0.2em] mb-3" style={{ color: '#8e8e93' }}>
             {t('lobby.orPremise', language)}
           </p>
-          <div className="flex items-center gap-2 justify-center">
-            <input
-              type="text"
-              value={premise}
-              onChange={(e) => setPremise(e.target.value)}
-              placeholder={t('lobby.premisePlaceholder', language)}
-              className="w-64 text-center text-sm py-2.5 bg-transparent transition-all duration-300"
-              style={{
-                color: '#1c1c1e',
-                border: 'none',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: 0,
-                outline: 'none',
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.3)' }}
-              onBlur={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.06)' }}
-            />
-            <button
-              onClick={generatePremiseFn}
-              disabled={generatingPremise || !genre}
-              className="text-xs tracking-wider transition-colors disabled:opacity-30 whitespace-nowrap"
-              style={{ color: generatingPremise ? '#8e8e93' : '#aeaeb2' }}
-              title={language === 'en' ? 'AI Generate' : 'AI 生成前提'}
-            >
-              {generatingPremise ? '...' : '✦'}
-            </button>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-64">
+                <input
+                  type="text"
+                  value={premise}
+                  onChange={(e) => setPremise(e.target.value)}
+                  placeholder={language === 'en' ? 'A mysterious premise...' : '输入一个故事前提...'}
+                  className="w-full text-sm bg-transparent outline-none truncate"
+                  style={{
+                    color: premise ? '#1c1c1e' : '#aeaeb2',
+                    border: 'none',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    lineHeight: '1.75rem',
+                    padding: '0',
+                    textAlign: 'center',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.3)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.06)' }}
+                />
+              </div>
+              <button
+                onClick={generatePremiseFn}
+                disabled={generatingPremise || !genre}
+                className="text-xs tracking-wider transition-colors disabled:opacity-30 whitespace-nowrap"
+                style={{ color: generatingPremise ? '#8e8e93' : '#aeaeb2' }}
+                title={language === 'en' ? 'AI Generate' : 'AI 生成前提'}
+              >
+                {generatingPremise ? '...' : '✦'}
+              </button>
+            </div>
+            {premise && (
+              <button
+                onClick={() => setShowFullPremise(true)}
+                className="text-[9px] tracking-[0.25em] transition-all duration-200 flex items-center gap-1"
+                style={{ color: '#aeaeb2' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#8e8e93'; e.currentTarget.style.gap = '4px' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#aeaeb2'; e.currentTarget.style.gap = '2px' }}
+              >
+                <span>{language === 'en' ? 'view full' : '查看完整'}</span>
+                <span className="text-[7px] leading-none transition-transform duration-200" style={{ display: 'inline-block' }}>⌄</span>
+              </button>
+            )}
           </div>
 
           {/* Story Club */}
@@ -783,6 +801,83 @@ function LobbyNewContent() {
         </div>
       </div>
     </div>
+
+      {/* ─── Full Premise Overlay ─── */}
+      {showFullPremise && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.15)' }}
+          onClick={() => setShowFullPremise(false)}
+        >
+          <div
+            className="mx-4 w-full max-w-lg rounded-2xl p-6 shadow-xl"
+            style={{ background: '#fff', minHeight: '320px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[10px] tracking-[0.2em] mb-3" style={{ color: '#8e8e93' }}>
+              {language === 'en' ? 'Edit Premise' : '编辑故事前提'}
+            </p>
+            <textarea
+              value={premise}
+              onChange={(e) => setPremise(e.target.value)}
+              className="w-full resize-none outline-none"
+              style={{
+                color: '#1c1c1e',
+                border: 'none',
+                lineHeight: '1.7',
+                minHeight: '220px',
+                fontSize: '14px',
+              }}
+              autoFocus
+            />
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPremise('')}
+                  className="px-5 py-2 text-xs tracking-wider transition-all duration-200"
+                  style={{
+                    borderRadius: '10px',
+                    border: 'none',
+                    color: '#fff',
+                    background: '#1c1c1e',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#000' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#1c1c1e' }}
+                >
+                  {language === 'en' ? 'Clear' : '清除'}
+                </button>
+                <button
+                  onClick={() => generatePremiseFn()}
+                  disabled={generatingPremise || !genre}
+                  className="px-5 py-2 text-xs tracking-wider transition-all duration-200 disabled:opacity-30"
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    color: '#1c1c1e',
+                    background: generatingPremise ? 'rgba(0,0,0,0.03)' : 'transparent',
+                  }}
+                  onMouseEnter={(e) => { if (!generatingPremise && genre) { e.currentTarget.style.borderColor = '#1c1c1e'; e.currentTarget.style.background = 'rgba(0,0,0,0.03)' } }}
+                  onMouseLeave={(e) => { if (!generatingPremise && genre) { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)'; e.currentTarget.style.background = 'transparent' } }}
+                >
+                  {generatingPremise ? '⋯' : '↻'} {generatingPremise ? (language === 'en' ? 'Generating' : '生成中') : (language === 'en' ? 'Regenerate' : '重新生成')}
+                </button>
+              </div>
+              <button
+                onClick={() => setShowFullPremise(false)}
+                className="px-5 py-2 text-xs tracking-wider transition-all duration-200"
+                style={{
+                  borderRadius: '10px',
+                  background: '#1c1c1e',
+                  color: '#fff',
+                  border: 'none',
+                }}
+              >
+                {language === 'en' ? 'Done' : '确定'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Bottom Bar ─── */}
       <div
