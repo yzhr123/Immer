@@ -44,8 +44,9 @@ export default function BetaGamePage() {
   const { balance, refresh: refreshBalance, setBalance } = useCredits()
 
   const [typingDone, setTypingDone] = useState(false)
-  const [waitingFor, setWaitingFor] = useState<string | null>(null)
-  const [error, setError] = useState('')
+const [waitingFor, setWaitingFor] = useState<string | null>(null)
+const [genStage, setGenStage] = useState<'thinking' | 'writing' | 'polishing' | 'ready' | null>(null)
+const [error, setError] = useState('')
   const [viewingHistoryIndex, setViewingHistoryIndex] = useState<number | null>(null)
   const [showHistoryList, setShowHistoryList] = useState(false)
   const [refreshed, setRefreshed] = useState(false)
@@ -70,6 +71,25 @@ export default function BetaGamePage() {
   const preGenRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
   const onDemandRef = useRef<Set<string>>(new Set())
+
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => {
+    if (!waitingFor) {
+      setGenStage(null)
+      stageTimerRef.current.forEach(clearTimeout)
+      stageTimerRef.current = []
+      return
+    }
+    setGenStage('thinking')
+    stageTimerRef.current = [
+      setTimeout(() => setGenStage('writing'), 1500),
+      setTimeout(() => setGenStage('polishing'), 4000),
+    ]
+    return () => {
+      stageTimerRef.current.forEach(clearTimeout)
+      stageTimerRef.current = []
+    }
+  }, [waitingFor])
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -476,6 +496,8 @@ export default function BetaGamePage() {
       })
       if (!res.ok) throw new Error('Generation failed')
       const data: BetaSceneResponse = await res.json()
+      setGenStage('ready')
+      await new Promise((r) => setTimeout(r, 350))
       applyBetaBranch(choiceId, data)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -790,9 +812,26 @@ export default function BetaGamePage() {
 
               {/* waiting */}
               {!isHistoryView && waitingFor && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-xs tracking-widest animate-pulse" style={{ color: theme.textMuted }}>
-                    PREPARING THIS PATH...
+                <div className="flex items-center justify-center py-8 gap-3">
+                  <div className="text-xs tracking-widest" style={{ color: theme.textMuted }}>
+                    {genStage === 'thinking' && (language === 'zh' ? '构思中' : 'Thinking')}
+                    {genStage === 'writing' && (language === 'zh' ? '撰写中' : 'Writing')}
+                    {genStage === 'polishing' && (language === 'zh' ? '润色中' : 'Polishing')}
+                    {genStage === 'ready' && (language === 'zh' ? '完成' : 'Ready')}
+                    {!genStage && '...'}
+                  </div>
+                  <div className="flex gap-1">
+                    {['thinking', 'writing', 'polishing', 'ready'].map((s) => (
+                      <span
+                        key={s}
+                        className="w-1.5 h-1.5 rounded-full transition-all duration-500"
+                        style={{
+                          backgroundColor: theme.textMuted,
+                          opacity: genStage === s ? 1 : 0.15,
+                          transform: genStage === s ? 'scale(1.4)' : 'scale(1)',
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
