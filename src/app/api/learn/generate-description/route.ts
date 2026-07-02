@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 {
   "description": "课程描述文本",
   "subject": "推断的学科分类，2-4个字，如：编程 / 设计 / 金融 / 管理",
-  "storyName": "故事名称，2-6个字，给这个课程/故事起一个简洁有吸引力的名字，如：税务之旅 / K线探秘",
+  "icon": "一个能代表课程主题的单字图标，如：税 / 稽 / K / 经 / 网 / 码 / 算",
   "objectives": ["学习目标1", "学习目标2", "学习目标3"]
 }`
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       description: (parsed.description || raw).trim(),
       subject: parsed.subject || '',
-      storyName: parsed.storyName || '',
+      icon: parsed.icon || '',
       objectives: Array.isArray(parsed.objectives) ? parsed.objectives : [],
     })
   } catch (err: unknown) {

@@ -77,6 +77,35 @@ export interface LearnProgress {
   completedAt?: string
 }
 
+/** 系列课程深度级别 */
+export type SeriesDepthLevel = 'overview' | 'detailed' | 'comprehensive'
+
+export const SERIES_DEPTH_LABELS: Record<SeriesDepthLevel, string> = {
+  overview: '概览了解',
+  detailed: '深入学习',
+  comprehensive: '全面掌握',
+}
+
+/** 系列课程知识点 */
+export interface SeriesKnowledgePoint {
+  id: string
+  name: string
+  description: string
+  courseId?: string
+  completed: boolean
+}
+
+/** 系列课程定义 */
+export interface LearnSeries {
+  id: string
+  title: string
+  topic: string
+  depth: SeriesDepthLevel
+  icon: string
+  knowledgePoints: SeriesKnowledgePoint[]
+  createdAt: number
+}
+
 /** Store 状态 */
 export interface LearnStore {
   /** 所有课程的进度 keyed by courseId */
@@ -97,4 +126,10 @@ export interface LearnStore {
   deleteCourse: (courseId: string) => void
   /** 更新自定义课程 */
   updateCourse: (courseId: string, patch: Partial<Omit<LearnCourse, 'id'>>) => void
+  /** 系列课程 */
+  series: LearnSeries[]
+  addSeries: (data: Omit<LearnSeries, 'id' | 'createdAt'>) => string
+  updateSeries: (seriesId: string, patch: Partial<Omit<LearnSeries, 'id' | 'createdAt'>>) => void
+  updateSeriesKp: (seriesId: string, kpId: string, patch: Partial<SeriesKnowledgePoint>) => void
+  removeSeries: (seriesId: string) => void
 }

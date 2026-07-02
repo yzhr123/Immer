@@ -130,11 +130,13 @@ function LearnedKnowledgePoints({
 export default function LearnPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [activeSubject, setActiveSubject] = useState('all')
+  const [activeSubject, setActiveSubject] = useState('系列课程')
   const progresses = useLearnStore((s) => s.progresses)
   const userCourses = useLearnStore((s) => s.userCourses)
   const deletedCourseIds = useLearnStore((s) => s.deletedCourseIds)
   const deleteCourse = useLearnStore((s) => s.deleteCourse)
+  const series = useLearnStore((s) => s.series)
+  const removeSeries = useLearnStore((s) => s.removeSeries)
   const deletedSet = useMemo(() => new Set(deletedCourseIds), [deletedCourseIds])
   const allCourses = useMemo(
     () => [...COURSES, ...userCourses].filter((c) => !deletedSet.has(c.id)),
@@ -244,28 +246,19 @@ export default function LearnPage() {
         {mounted && (
           <LearnCourses
             courses={allCourses}
+            series={series}
             progresses={progresses}
             activeSubject={activeSubject}
             onSubjectChange={setActiveSubject}
             onDelete={(id) => deleteCourse(id)}
+            onSeriesDelete={(id) => removeSeries(id)}
           />
         )}
 
-        {/* Create course */}
-        {mounted && (
-          <div className="mt-6 text-center">
-            <Link
-              href="/learn/create"
-              className="inline-block text-[10px] tracking-wider transition-colors hover:opacity-60"
-              style={{ color: '#bbb', letterSpacing: '0.12em' }}
-            >
-              + 创建课程
-            </Link>
-          </div>
+        {/* ─── 已学知识点 (hide when in series mode) ─── */}
+        {mounted && activeSubject !== '系列课程' && (
+          <LearnedKnowledgePoints progresses={progresses} allCourses={allCourses} activeSubject={activeSubject} />
         )}
-
-        {/* ─── 已学知识点 ─── */}
-        {mounted && <LearnedKnowledgePoints progresses={progresses} allCourses={allCourses} activeSubject={activeSubject} />}
 
         {/* Separator */}
         <div

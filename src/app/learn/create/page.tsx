@@ -18,10 +18,15 @@ export default function CreateCoursePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('id')
+  const seriesId = searchParams.get('seriesId')
+  const kpId = searchParams.get('kpId')
+  const kpName = searchParams.get('kpName')
+  const kpDesc = searchParams.get('kpDesc')
 
   const addUserCourse = useLearnStore((s) => s.addUserCourse)
   const updateCourse = useLearnStore((s) => s.updateCourse)
   const deleteCourse = useLearnStore((s) => s.deleteCourse)
+  const updateSeriesKp = useLearnStore((s) => s.updateSeriesKp)
   const userCourses = useLearnStore((s) => s.userCourses)
   const llmSettings = useStore((s) => s.llmSettings)
 
@@ -31,7 +36,7 @@ export default function CreateCoursePage() {
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner')
   const [estimatedMinutes, setEstimatedMinutes] = useState(20)
   const [totalNodes, setTotalNodes] = useState(6)
-  const [storyName, setStoryName] = useState('')
+  const [icon, setIcon] = useState('')
   const [objectives, setObjectives] = useState<string[]>([])
   const [objectiveInput, setObjectiveInput] = useState('')
   const [saving, setSaving] = useState(false)
@@ -50,9 +55,16 @@ export default function CreateCoursePage() {
     setDifficulty(course.difficulty)
     setEstimatedMinutes(course.estimatedMinutes)
     setTotalNodes(course.totalNodes)
-    setStoryName(course.icon)
+    setIcon(course.icon)
     setObjectives(course.objectives)
   }, [editId, userCourses])
+
+  // Series context: pre-fill from KP info
+  useEffect(() => {
+    if (!seriesId || !kpId) return
+    if (kpName) setTitle(kpName)
+    if (kpDesc) setObjectives([kpDesc])
+  }, [seriesId, kpId, kpName, kpDesc])
 
   const isEditing = !!editId
 
@@ -92,7 +104,7 @@ export default function CreateCoursePage() {
       const data = await res.json()
       if (data.description) setDescription(data.description)
       if (data.subject && !subject.trim()) setSubject(data.subject)
-      if (data.storyName && !storyName.trim()) setStoryName(data.storyName)
+      if (data.icon && !icon.trim()) setIcon(data.icon)
       if (data.objectives?.length && objectives.length === 0) setObjectives(data.objectives)
     } catch {
       alert('生成描述失败，请重试')
@@ -120,7 +132,7 @@ export default function CreateCoursePage() {
         difficulty,
         estimatedMinutes,
         totalNodes,
-        icon: storyName.trim() || title.trim()[0] || '?',
+        icon: icon.trim() || title.trim()[0] || '?',
         objectives,
       }
 
@@ -140,10 +152,14 @@ export default function CreateCoursePage() {
         difficulty,
         estimatedMinutes,
         totalNodes,
-        icon: storyName.trim() || title.trim()[0] || '?',
+        icon: icon.trim() || title.trim()[0] || '?',
         objectives,
       })
-      router.push(`/learn/course/${id}`)
+      // Link course to series KP if in series context
+      if (seriesId && kpId) {
+        updateSeriesKp(seriesId, kpId, { courseId: id })
+      }
+      router.push(seriesId ? `/learn/series/${seriesId}` : `/learn/course/${id}`)
     }
   }
 
@@ -260,20 +276,22 @@ export default function CreateCoursePage() {
             </div>
             <div>
               <label className="text-[10px] tracking-wider mb-2 block" style={{ color: '#8e8e93' }}>
-                故事名称
+                图标
               </label>
               <input
-                value={storyName}
-                onChange={(e) => setStoryName(e.target.value)}
-                placeholder="给这个故事起个名字"
-                maxLength={20}
-                className="w-full px-4 py-3 text-sm outline-none transition-colors"
+                value={icon}
+                onChange={(e) => setIcon(e.target.value.slice(0, 1))}
+                placeholder="单个字"
+                maxLength={1}
+                className="w-20 px-4 py-3 text-sm text-center outline-none transition-colors"
                 style={{
                   border: '1px solid rgba(0,0,0,0.06)',
                   borderRadius: '12px',
                   background: 'rgba(255,255,255,0.5)',
                   color: '#1c1c1e',
                 }}
+                onFocus={(e) => { e.target.style.borderColor = 'rgba(0,0,0,0.15)' }}
+                onBlur={(e) => { e.target.style.borderColor = 'rgba(0,0,0,0.06)' }}
               />
             </div>
           </div>
