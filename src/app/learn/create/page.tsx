@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useLearnStore } from '@/learn/store'
@@ -15,6 +15,14 @@ const DIFFICULTY_OPTIONS = [
 ] as const
 
 export default function CreateCoursePage() {
+  return (
+    <Suspense>
+      <CreateCourseContent />
+    </Suspense>
+  )
+}
+
+function CreateCourseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('id')
