@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Genre, GENRE_NAMES, GENRE_NAMES_EN } from '@/lib/ai/types'
 import { useStore } from '@/lib/store'
 import { t } from '@/lib/i18n'
+import type { LLMSettings } from '@/lib/ai/types'
 
 const GENRES: Genre[] = ['fantasy', 'sci-fi', 'mystery', 'historical', 'horror', 'martial-arts']
 
@@ -15,8 +16,11 @@ export default function GenreSelector({
   onSelect: (genre: string) => void
 }) {
   const language = useStore((s) => s.language)
+  const llmSettings = useStore((s) => s.llmSettings)
   const [customMode, setCustomMode] = useState(false)
   const [customValue, setCustomValue] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState('')
 
   // Auto-switch to custom mode when a non-preset genre is selected (Story Club import).
   useEffect(() => {
@@ -52,20 +56,63 @@ export default function GenreSelector({
     })
   }, [selected])
 
+  async function generateGenre() {
+    if (!llmSettings.apiUrl || !llmSettings.model || !llmSettings.apiKey) {
+      setGenError(language === 'en' ? 'LLM not configured' : '未配置 LLM')
+      return
+    }
+    setGenError('')
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/beta/random-genre', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ llmConfig: llmSettings, language }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Generate failed')
+      }
+      const data = await res.json()
+      if (data.genre) {
+        setCustomValue(data.genre)
+        onSelect(data.genre)
+      }
+    } catch (e) {
+      setGenError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   if (customMode) {
     return (
       <div className="flex flex-col items-center gap-3">
-        <input
-          type="text"
-          value={customValue}
-          onChange={(e) => {
-            setCustomValue(e.target.value)
-            onSelect(e.target.value || '自定义')
-          }}
-          placeholder={t('genre.customPlaceholder', language)}
-          className="w-64 text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-1.5 focus:outline-none focus:border-zinc-600 transition-colors"
-          autoFocus
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={customValue}
+            onChange={(e) => {
+              setGenError('')
+              setCustomValue(e.target.value)
+              onSelect(e.target.value)
+            }}
+            placeholder={t('genre.customPlaceholder', language)}
+            className="w-56 text-center text-sm text-zinc-600 placeholder-zinc-300 bg-transparent border-b border-zinc-200 pb-1.5 focus:outline-none focus:border-zinc-600 transition-colors"
+            autoFocus
+          />
+          <button
+            onClick={generateGenre}
+            disabled={generating}
+            className="text-xs tracking-wider text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-30 whitespace-nowrap"
+            title={language === 'en' ? 'AI Generate' : 'AI 随机生成'}
+          >
+            {generating ? '...' : '✦'}
+          </button>
+        </div>
+        {genError && (
+          <p className="text-[11px] text-red-400/70 tracking-wider">{genError}</p>
+        )}
         <button
           onClick={() => {
             setCustomMode(false)

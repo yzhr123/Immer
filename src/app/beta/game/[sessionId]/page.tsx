@@ -69,6 +69,7 @@ export default function BetaGamePage() {
   const firstGenRef = useRef(false)
   const preGenRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+  const onDemandRef = useRef<Set<string>>(new Set())
 
   const isHistoryView = viewingHistoryIndex !== null
 
@@ -310,6 +311,7 @@ export default function BetaGamePage() {
       })
       if (!res.ok) throw new Error('Branch generation failed')
       const data: BetaSceneResponse = await res.json()
+      if (onDemandRef.current.has(choiceId)) return
       setBranches((prev) => ({ ...prev, [choiceId]: data }))
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
@@ -353,6 +355,7 @@ export default function BetaGamePage() {
 
     setBranches({})
     setWaitingFor(null)
+    onDemandRef.current.delete(choiceId)
     setViewingHistoryIndex(null)
     setTypingDone(false)
     saveCurrentGame()
@@ -368,6 +371,7 @@ export default function BetaGamePage() {
 
     // Free action: no matching choice, use the typed text
     if (!choice) {
+      onDemandRef.current.add(choiceId)
       setWaitingFor(choiceId)
       generateBranchOnDemand(choiceId, customInput || '')
       return
@@ -383,6 +387,7 @@ export default function BetaGamePage() {
     if (branch) {
       applyBetaBranch(choiceId, branch)
     } else {
+      onDemandRef.current.add(choiceId)
       setWaitingFor(choiceId)
       generateBranchOnDemand(choiceId, customInput)
     }
@@ -475,6 +480,8 @@ export default function BetaGamePage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setError(msg)
+    } finally {
+      onDemandRef.current.delete(choiceId)
     }
   }
 

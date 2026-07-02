@@ -69,6 +69,7 @@ function LobbyNewContent() {
   const { llmSettings, initGame, savedGames, refreshSavedGames, language, setLanguage, imageMode, setImageMode } = useStore()
   const [genre, setGenre] = useState<string | null>(null)
   const [premise, setPremise] = useState('')
+  const [generatingPremise, setGeneratingPremise] = useState(false)
   const [storyLength, setStoryLength] = useState<StoryLength>('medium')
   const [loading, setLoading] = useState(false)
   const [storyClubOpen, setStoryClubOpen] = useState(false)
@@ -100,6 +101,25 @@ function LobbyNewContent() {
       clearInterval(balanceInterval)
     }
   }, [refreshBalance])
+
+  async function generatePremiseFn() {
+    if (!genre) return
+    if (!llmSettings.apiUrl || !llmSettings.model || !llmSettings.apiKey) return
+    setGeneratingPremise(true)
+    try {
+      const res = await fetch('/api/beta/generate-premise', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genre, llmConfig: llmSettings, language }),
+      })
+      if (!res.ok) throw new Error('Generate failed')
+      const data = await res.json()
+      if (data.premise) setPremise(data.premise)
+    } catch {
+    } finally {
+      setGeneratingPremise(false)
+    }
+  }
 
   function handleStart() {
     if (!genre) return
@@ -373,22 +393,33 @@ function LobbyNewContent() {
           <p className="text-[11px] tracking-[0.2em] mb-3" style={{ color: '#8e8e93' }}>
             {t('lobby.orPremise', language)}
           </p>
-          <input
-            type="text"
-            value={premise}
-            onChange={(e) => setPremise(e.target.value)}
-            placeholder={t('lobby.premisePlaceholder', language)}
-            className="w-full text-center text-sm py-2.5 bg-transparent transition-all duration-300"
-            style={{
-              color: '#1c1c1e',
-              border: 'none',
-              borderBottom: '1px solid rgba(0,0,0,0.06)',
-              borderRadius: 0,
-              outline: 'none',
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.3)' }}
-            onBlur={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.06)' }}
-          />
+          <div className="flex items-center gap-2 justify-center">
+            <input
+              type="text"
+              value={premise}
+              onChange={(e) => setPremise(e.target.value)}
+              placeholder={t('lobby.premisePlaceholder', language)}
+              className="w-64 text-center text-sm py-2.5 bg-transparent transition-all duration-300"
+              style={{
+                color: '#1c1c1e',
+                border: 'none',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                borderRadius: 0,
+                outline: 'none',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.3)' }}
+              onBlur={(e) => { e.currentTarget.style.borderBottomColor = 'rgba(0,0,0,0.06)' }}
+            />
+            <button
+              onClick={generatePremiseFn}
+              disabled={generatingPremise || !genre}
+              className="text-xs tracking-wider transition-colors disabled:opacity-30 whitespace-nowrap"
+              style={{ color: generatingPremise ? '#8e8e93' : '#aeaeb2' }}
+              title={language === 'en' ? 'AI Generate' : 'AI 生成前提'}
+            >
+              {generatingPremise ? '...' : '✦'}
+            </button>
+          </div>
 
           {/* Story Club */}
           <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}>
